@@ -3,14 +3,13 @@
 
 import collections
 
-from beancount.core import data
-from beancount.core import getters
-from beancount.core import account
+from beancount.core import data as core_data
+from beancount.core import account as core_account
 
 __plugins__ = ("validate_transactions",)
 
-MissingJournalAccountName = collections.namedtuple(
-    "MissingJournalAccountName", "source message entry"
+InvalidJournalOpeningBalance = collections.namedtuple(
+    "InvalidJournalOpeningBalance", "source message entry"
 )
 FirstPostingIsNotToSpecifiedAccountError = collections.namedtuple(
     "FirstPostingIsNotToSpecifiedAccountError", "source message entry"
@@ -201,7 +200,7 @@ def check_owed_transaction(entry, party):
                     )
                 ]
 
-            hasExpectedExpenseAccount = data.has_entry_account_component(
+            hasExpectedExpenseAccount = core_data.has_entry_account_component(
                 entry, owed_types[tag]["extra_allowed_account_prefix"]
             )
 
@@ -218,13 +217,13 @@ def check_owed_transaction(entry, party):
             other_allowed_account_prefixes.append(owed_types[tag]["extra_allowed_account_prefix"])
 
     for posting in entry.postings[1:]:
-        accountSplit = account.split(posting.account)
+        accountSplit = core_account.split(posting.account)
         party_of_posting = accountSplit[1]
 
         # Can only post to an account belonging to a different party if it is one of the allowed accounts
         if (
             not party_of_posting == party
-            and account.root(2, posting.account) not in other_allowed_account_prefixes
+            and core_account.root(2, posting.account) not in other_allowed_account_prefixes
         ):
             errors.append(
                 PostingToAnotherPartyError(
@@ -240,7 +239,7 @@ def check_owed_transaction(entry, party):
 def check_default_transaction(entry, party):
     errors = []
     # If entry has a posting with an account that has a component of "Transfers" it is not a valid default transaction
-    if data.has_entry_account_component(entry, "Transfers"):
+    if core_data.has_entry_account_component(entry, "Transfers"):
         errors.append(
             InvalidTransferTransaction(
                 entry.meta,
@@ -250,7 +249,7 @@ def check_default_transaction(entry, party):
         )
 
     for posting in entry.postings[1:]:
-        party_of_posting = account.split(posting.account)[1]
+        party_of_posting = core_account.split(posting.account)[1]
 
         if not party_of_posting == party:
             errors.append(
@@ -264,48 +263,114 @@ def check_default_transaction(entry, party):
     return errors
 
 
-def validate_transactions(entries, unused_options_map):
+def is_journal_opening_balance(entry):
+    return "journal-opening-balance" in entry.tags
+
+
+def check_journal_opening_balance(entry):
     errors = []
 
-    currentFile = ""
-    main_account = ""
-    main_party = ""
+    if not len(entry.tags) == 1:
+        errors.append(
+            InvalidJournalOpeningBalance(
+                entry.meta,
+                f"Journal opening balance transaction must have exactly one tag",
+                entry,
+            )
+        )
+    if not len(entry.postings) == 2:
+        errors.append(
+            InvalidJournalOpeningBalance(
+                entry.meta,
+                f"Journal opening balance transaction must have exactly two postings",
+                entry,
+            )
+        )
+    if not core_account.root(1, entry.postings[1].account) == "Equity":
+        errors.append(
+            InvalidJournalOpeningBalance(
+                entry.meta,
+                f"Equity account must be the second posting",
+                entry,
+            )
+        )
+    if not core_account.has_component(entry.postings[1].account, "OpeningBalances"):
+        errors.append(
+            InvalidJournalOpeningBalance(
+                entry.meta,
+                f"Second posting account must have a component of OpeningBalances",
+                entry,
+            )
+        )
+
+    filename = entry.meta["filename"]
+    account = entry.postings[0].account
+    party = core_account.split(account)[1]
+
+    return filename, account, party, errors
+
+
+def check_first_posting_account(entry, account):
+    errors = []
+
+    if not entry.postings[0].account == account:
+        errors.append(
+            FirstPostingIsNotToSpecifiedAccountError(
+                entry.meta,
+                f"The first posting should be to the account: {account}",
+                entry,
+            )
+        )
+
+    return errors
+
+
+def should_skip(entry):
+    return "skip-validation" in entry.tags
+
+
+def validate_transactions(entries, unused_options_map):
+    errors = []
+    fileAccountMap = {}
 
     for entry in entries:
-        if not currentFile == entry.meta["filename"]:
-            currentFile = entry.meta["filename"]
-            main_account = ""
-            main_party = ""
-        if isinstance(entry, data.Custom) and entry.type == "journal account name":
-            main_account = entry.values[0].value
-            main_party = account.split(main_account)[1]
-        elif isinstance(entry, data.Transaction):
-            if not main_account or not main_party:
+        if isinstance(entry, core_data.Transaction):
+            if should_skip(entry):
+                continue
+
+            if is_journal_opening_balance(entry):
+                filename, account, party, err = check_journal_opening_balance(entry)
+                fileAccountMap[filename] = {
+                    "account": account,
+                    "party": party,
+                }
+                errors.extend(err)
+                continue
+
+            transaction_filename = entry.meta["filename"]
+            if transaction_filename not in fileAccountMap:
                 errors.append(
-                    MissingJournalAccountName(
+                    InvalidJournalOpeningBalance(
                         entry.meta,
-                        "Journal account name must be specified before transactions using the custom directive",
+                        "Journal opening balance transaction must be specified before transactions",
                         entry,
                     )
                 )
                 continue
-            if not entry.postings[0].account == main_account:
-                errors.append(
-                    FirstPostingIsNotToSpecifiedAccountError(
-                        entry.meta,
-                        f"The first posting should be to the account: {main_account}",
-                        entry,
-                    )
-                )
+            transaction_account = fileAccountMap[transaction_filename]["account"]
+            transaction_party = fileAccountMap[transaction_filename]["party"]
+
+            first_posting_errors = check_first_posting_account(entry, transaction_account)
+            errors.extend(first_posting_errors)
 
             if is_transfer_transaction(entry):
-                transfer_transaction_errors = check_transfer_transaction(entry, main_party)
+                transfer_transaction_errors = check_transfer_transaction(entry, transaction_party)
                 errors.extend(transfer_transaction_errors)
             elif is_owed_transaction(entry):
-                owed_transaction_errors = check_owed_transaction(entry, main_party)
+                owed_transaction_errors = check_owed_transaction(entry, transaction_party)
                 errors.extend(owed_transaction_errors)
             else:
-                default_transaction_errors = check_default_transaction(entry, main_party)
+                default_transaction_errors = check_default_transaction(entry, transaction_party)
                 errors.extend(default_transaction_errors)
 
     return entries, errors

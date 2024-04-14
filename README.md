@@ -1,15 +1,17 @@
 # beancount-plugins
+
 Custom beancount plugins
 
 ## Validate shared ratio
+
 Calculates the correct ratio for the share policy `shared` and throws an error if it is incorrect.
 
 1. Calculates the total income for Francis as:\
-The total amount into accounts with root `Assets:Francis:Bank` from accounts with root `Income:Francis:GrossPay`
-3. Calculates the total income for Leyna as:\
-The total amount into accounts with root `Assets:Leyna:Bank` from accounts with root `Income:Leyna:GrossPay`
-4. Calculates the income ratio `Francis:Leyna` in the form `a:b` where `(a = 1 and b < 1) or (a < 1 and b = 1)`
-5. Throws an error if the calculated ratio is not the same as the ratio defined using the autobean share policy directive:
+   The total amount into accounts with root `Assets:Francis:Bank` from accounts with root `Income:Francis:GrossPay`
+2. Calculates the total income for Leyna as:\
+   The total amount into accounts with root `Assets:Leyna:Bank` from accounts with root `Income:Leyna:GrossPay`
+3. Calculates the income ratio `Francis:Leyna` in the form `a:b` where `(a = 1 and b < 1) or (a < 1 and b = 1)`
+4. Throws an error if the calculated ratio is not the same as the ratio defined using the autobean share policy directive:
    ```
    2000-01-01 custom "autobean.share.policy" "shared"
           share-Francis: a
@@ -19,10 +21,11 @@ The total amount into accounts with root `Assets:Leyna:Bank` from accounts with 
    ```
 
 ## Validate transactions
+
 Validates that transactions follow certain rules.
 
-1. Every journal should be for a real account (e.g. bank or credit card) and start with the custom directive `2000-01-01 custom "journal account name" "<account:name>".
-2. For every transaction the first posting should be to the account defined by the above directive.
+1. Every journal should be for a real account (e.g. bank or credit card) and start with an opening balance transaction with the `#journal-opening-balance` tag.
+2. For every following transaction in the journal the first posting should be to the same account as in the `#journal-opening-balance` transaction.
 3. For a transaction that includes an account with the component `Transfers` it should have the appropriate required tags.
 4. If a transaction posts to an account that belongs to someone else, this should have the appropriate tags.
 5. Transfer transactions must follow the following rules

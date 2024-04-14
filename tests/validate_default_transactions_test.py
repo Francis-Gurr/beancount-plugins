@@ -11,43 +11,32 @@ class TestValidateDefaultTransactions(unittest.TestCase):
     @loader.load_doc()
     def test_valid_default_transaction(self, entries, _, options_map):
         """
-        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-
-        2000-01-01 *
+        2000-01-01 * #journal-opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
+
+        2000-01-01 open  Expenses:Francis
+        2000-01-01 *
+          Assets:Francis:Bank        1 GBP
+          Expenses:Francis        -1 GBP
         """
         _, errors = validate_transactions(entries, options_map)
         self.assertEqual(0, len(errors))
 
     @loader.load_doc()
-    def test_invalid_default_transaction_missing_directive(self, entries, _, options_map):
-        """
-        2000-01-01 open  Assets:Francis:Bank
-        2000-01-01 open  Equity:Francis:OpeningBalances
-
-        2000-01-01 *
-          Assets:Francis:Bank        1 GBP
-          Equity:Francis:OpeningBalances    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(
-            errors[0].message,
-            "Journal account name must be specified before transactions using the custom directive",
-        )
-
-    @loader.load_doc()
     def test_invalid_default_transaction_order(self, entries, _, options_map):
         """
-        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-
-        2000-01-01 *
+        2000-01-01 * #journal-opening-balance
+          Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
+
+        2000-01-01 open  Expenses:Francis
+        2000-01-01 *
+          Expenses:Francis        -1 GBP
           Assets:Francis:Bank        1 GBP
         """
         _, errors = validate_transactions(entries, options_map)
@@ -59,10 +48,13 @@ class TestValidateDefaultTransactions(unittest.TestCase):
     @loader.load_doc()
     def test_invalid_default_transaction_to_transfer_account(self, entries, _, options_map):
         """
-        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
         2000-01-01 open  Assets:Francis:Bank
-        2000-01-01 open  Assets:Francis:Transfers:Elsewhere
+        2000-01-01 open  Equity:Francis:OpeningBalances
+        2000-01-01 * #journal-opening-balance
+          Assets:Francis:Bank        1 GBP
+          Equity:Francis:OpeningBalances    -1 GBP
 
+        2000-01-01 open  Assets:Francis:Transfers:Elsewhere
         2000-01-01 *
           Assets:Francis:Bank        1 GBP
           Assets:Francis:Transfers:Elsewhere -1 GBP
@@ -76,10 +68,13 @@ class TestValidateDefaultTransactions(unittest.TestCase):
     @loader.load_doc()
     def test_invalid_default_transaction_to_another_party(self, entries, _, options_map):
         """
-        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
         2000-01-01 open  Assets:Francis:Bank
-        2000-01-01 open  Assets:OtherParty:Bank
+        2000-01-01 open  Equity:Francis:OpeningBalances
+        2000-01-01 * #journal-opening-balance
+          Assets:Francis:Bank        1 GBP
+          Equity:Francis:OpeningBalances    -1 GBP
 
+        2000-01-01 open  Assets:OtherParty:Bank
         2000-01-01 *
           Assets:Francis:Bank        1 GBP
           Assets:OtherParty:Bank -1 GBP
@@ -94,11 +89,14 @@ class TestValidateDefaultTransactions(unittest.TestCase):
     @loader.load_doc()
     def test_invalid_default_transaction_multiple(self, entries, _, options_map):
         """
-        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
         2000-01-01 open  Assets:Francis:Bank
+        2000-01-01 open  Equity:Francis:OpeningBalances
+        2000-01-01 * #journal-opening-balance
+          Assets:Francis:Bank        1 GBP
+          Equity:Francis:OpeningBalances    -1 GBP
+
         2000-01-01 open  Assets:Francis:Transfers:Elsewhere
         2000-01-01 open  Assets:OtherParty:Bank
-
         2000-01-01 *
           Assets:Francis:Transfers:Elsewhere -1 GBP
           Assets:Francis:Bank        2 GBP
@@ -106,6 +104,25 @@ class TestValidateDefaultTransactions(unittest.TestCase):
         """
         _, errors = validate_transactions(entries, options_map)
         self.assertEqual(3, len(errors))
+
+    @loader.load_doc()
+    def test_skip_validation(self, entries, _, options_map):
+        """
+        2000-01-01 open  Assets:Francis:Bank
+        2000-01-01 open  Equity:Francis:OpeningBalances
+        2000-01-01 * #journal-opening-balance
+          Assets:Francis:Bank        1 GBP
+          Equity:Francis:OpeningBalances    -1 GBP
+
+        2000-01-01 open  Assets:Francis:Transfers:Elsewhere
+        2000-01-01 open  Assets:OtherParty:Bank
+        2000-01-01 * #skip-validation
+          Assets:Francis:Transfers:Elsewhere -1 GBP
+          Assets:Francis:Bank        2 GBP
+          Assets:OtherParty:Bank -1 GBP
+        """
+        _, errors = validate_transactions(entries, options_map)
+        self.assertEqual(0, len(errors))
 
 
 if __name__ == "__main__":
