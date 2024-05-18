@@ -163,15 +163,15 @@ def is_owed_transaction(entry):
 def check_owed_transaction(entry, party):
     owed_types = {
         "owed-by-francis": {
-            "extra_allowed_account_prefix": "Expenses:Francis",
+            "extra_allowed_account_prefixes": ["Expenses:Francis", "Assets:Francis:Receivables"],
             "tags": ["owed", "owed-by-francis"],
         },
         "owed-by-leyna": {
-            "extra_allowed_account_prefix": "Expenses:Leyna",
+            "extra_allowed_account_prefixes": ["Expenses:Leyna", "Assets:Leyna:Receivables"],
             "tags": ["owed", "owed-by-leyna"],
         },
         "owed-by-shared": {
-            "extra_allowed_account_prefix": "Expenses:Shared",
+            "extra_allowed_account_prefixes": ["Expenses:Shared", "Assets:Shared:Receivables"],
             "tags": ["owed", "owed-by-shared"],
         },
     }
@@ -200,35 +200,44 @@ def check_owed_transaction(entry, party):
                     )
                 ]
 
-            hasExpectedExpenseAccount = core_data.has_entry_account_component(
-                entry, owed_types[tag]["extra_allowed_account_prefix"]
-            )
+            hasExpectedAccountWithPrefix = False
+            for allowed_account_prefix in owed_types[tag]["extra_allowed_account_prefixes"]:
+                hasExpectedAccountWithPrefix = (
+                    hasExpectedAccountWithPrefix
+                    or core_data.has_entry_account_component(entry, allowed_account_prefix)
+                )
 
-            # Must have an expense account for the party that is owed
-            if not hasExpectedExpenseAccount:
+            # Must have a posting to Expenses:OwedPart or Assets:OwedPart:Receivables
+            if not hasExpectedAccountWithPrefix:
                 errors.append(
                     InvalidOwedTransaction(
                         entry.meta,
-                        f"Expected an expense account for the party that is owed: {owed_types[tag]['extra_allowed_account_prefix']}",
+                        f"Expected at least one posting to an account starting with: {owed_types[tag]['extra_allowed_account_prefixes']}",
                         entry,
                     )
                 )
 
-            other_allowed_account_prefixes.append(owed_types[tag]["extra_allowed_account_prefix"])
+            other_allowed_account_prefixes = (
+                other_allowed_account_prefixes + owed_types[tag]["extra_allowed_account_prefixes"]
+            )
 
     for posting in entry.postings[1:]:
         accountSplit = core_account.split(posting.account)
         party_of_posting = accountSplit[1]
 
-        # Can only post to an account belonging to a different party if it is one of the allowed accounts
-        if (
-            not party_of_posting == party
-            and core_account.root(2, posting.account) not in other_allowed_account_prefixes
-        ):
+        postingPartyIsNotEntryParty = not party_of_posting == party
+        postingAccountIsNotExpected = False
+        for allowed_account_prefix in other_allowed_account_prefixes:
+            postingAccountIsNotExpected = postingAccountIsNotExpected or posting.account.startswith(
+                allowed_account_prefix
+            )
+
+        # Cannot post to any account that does not belong to the party or to Expenses:OwedParties or Assets:OwedParties:Receivables
+        if postingPartyIsNotEntryParty and not postingAccountIsNotExpected:
             errors.append(
                 PostingToAnotherPartyError(
                     posting.meta,
-                    f"Posting to an account that does not belong to the party: {party}, or to any of the owed party's expense accounts: {other_allowed_account_prefixes}. If this was intentional, please use the appropriate tags.",
+                    f"Posting to an account that does not belong to the party: {party}, or to any of the owed parties' allowed accounts: {other_allowed_account_prefixes}. If this was intentional, please use the appropriate tags.",
                     posting,
                 )
             )
@@ -248,6 +257,7 @@ def check_default_transaction(entry, party):
             )
         )
 
+    # If entry has tag of #valuables, check that it has metadata of "receipt" and vice versa
     for posting in entry.postings[1:]:
         party_of_posting = core_account.split(posting.account)[1]
 

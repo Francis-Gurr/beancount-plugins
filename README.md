@@ -31,7 +31,7 @@ Validates that transactions follow certain rules.
 5. Transfer transactions must follow the following rules
    - Have only one of the following tags: `transfer-to-self`, `transfer-to-francis`, `transfer-to-leyna`, `transfer-from-self`, `transfer-from-francis`, `transfer-from-leyna`.
    - The payee must be `Self`, `Francis`, `Leyna` or `Shared` respectively.
-   - The narration must start with `Transfer to self`, `Transfer to Francis`, `Transfer to Leyna`, `Transfer to Shared` respectively.
+   - The narration must start with `Transfer to self: `, `Transfer to Francis: `, `Transfer to Leyna: `, `Transfer to Shared: ` respectively and the colon should be followed by the account name.
    - Can only have two postings.
    - The second posting must be to `Assets:Francis:Transfers:<Self || FromLeyna || FromShared>`, `Assets:Leyna:Transfers:<Self || FromFrancis || FromShared>`, `Assets:Shared:Transfers:<Self || FromFrancis || FromLeyna>` respecively.
    - If it is a transfer from, the first posting amount must be positive.
@@ -39,6 +39,6 @@ Validates that transactions follow certain rules.
 6. Owed transactions must follow the following rules:
    - Must include one or more of the following tags: `owed-by-francis`, `owed-by-leyna`, `owed-by-shared`.
    - Owed tag must be for another party.
-   - Entry must include at least one posting to an expense account for the party that is owed.
+   - Entry must include at least one posting to an expense account or a receivables account for the party that is owed.
    - Cannot post to any other party's account that is not owed.
    - Can only post to an expense account for the owed party.
