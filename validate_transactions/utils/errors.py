@@ -22,3 +22,4 @@ PayslipTransactionError = collections.namedtuple(
     "PayslipTransactionError", "source message entry"
 )
 OwedTransactionError = collections.namedtuple("OwedTransactionError", "source message entry")
+FileNotFoundError = collections.namedtuple("FileNotFoundError", "source message entry")

@@ -1,13 +1,14 @@
 from beancount.core import data as core_data
 from beancount.core import account as core_account
 
-from .utils.errors import FirstPostingIsNotToSpecifiedAccountError, OpeningBalanceTransactionError
 from .utils.balance_assertions import validate_balance_assertion
+from .utils.errors import FirstPostingIsNotToSpecifiedAccountError, OpeningBalanceTransactionError
+from .utils.link_documents import create_document_entries
 from .utils.opening_balance_transactions import is_opening_balance_transaction, validate_opening_balance_transaction
-from .utils.transfer_transactions import is_transfer_transaction, validate_transfer_transaction
 from .utils.owed_transactions import is_owed_transaction, validate_owed_transaction
-from .utils.receipt_transactions import is_receipt_transaction, validate_receipt_transaction
 from .utils.payslip_transactions import is_payslip_transaction, validate_payslip_transaction
+from .utils.receipt_transactions import is_receipt_transaction, validate_receipt_transaction
+from .utils.transfer_transactions import is_transfer_transaction, validate_transfer_transaction
 
 __plugins__ = ("validate_transactions",)
 
@@ -55,7 +56,6 @@ def validate_transactions(entries, unused_options_map):
 
         if isinstance(entry, core_data.Balance):
             errors.extend(validate_balance_assertion(entry))
-            entry.meta["document"] = entry.meta.get("statement", "")
             entries_with_documents.append(entry)
 
         elif isinstance(entry, core_data.Transaction) and is_opening_balance_transaction(entry):
@@ -90,24 +90,17 @@ def validate_transactions(entries, unused_options_map):
 
             if is_receipt_transaction(entry):
                 errors.extend(validate_receipt_transaction(entry))
-                entry.meta["document"] = entry.meta.get("receipt", "")
                 entries_with_documents.append(entry)
 
             if is_payslip_transaction(entry):
-                errors.extend(validate_payslip_transaction(entry))
-                entry.meta["document"] = entry.meta.get("payslip", "")
+                errors.extend(validate_payslip_transaction(entry, party))
                 entries_with_documents.append(entry)
 
-    # for entry in entries_with_documents:
-    #     if "document" in entry.meta:
-    #         events.append(
-    #             core_data.Document(
-    #                 meta=entry.meta,
-    #                 date=entry.date,
-    #                 uri=entry.meta["document"],
-    #             )
-    #         )
+    for entry in entries_with_documents:
+        document_entries, document_errors = create_document_entries(entry)
+        errors.extend(document_errors)
+        entries.extend(document_entries)
 
-    # print (errors)
+    print ("----------------------------------------------------------------")
 
     return entries, errors
