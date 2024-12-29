@@ -7,7 +7,7 @@ def is_payslip_transaction(entry):
 def validate_payslip_transaction(entry):
     errors = []
 
-    if "valuables" not in entry.tags:
+    if "payslip" not in entry.tags:
         errors.append(
             PayslipTransactionError(
                 entry.meta,
@@ -16,7 +16,7 @@ def validate_payslip_transaction(entry):
             )
         )
 
-    if not any_posting_has_metadata_key(entry.postings, "payslip"):
+    if not "payslip" in entry.meta:
         errors.append(
             PayslipTransactionError(
                 entry.meta,

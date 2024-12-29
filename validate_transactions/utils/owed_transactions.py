@@ -8,7 +8,10 @@ def any_posting_has_different_party(postings, party):
     return any(core_account.split(posting.account)[1] != party for posting in postings)
 
 def is_owed_transaction(entry, party):
-    return any_tag_starts_with(entry.tags, "owed") or any_posting_has_different_party(entry.postings, party)
+    return any_tag_starts_with(entry.tags, "owed") or (
+        any_posting_has_different_party(entry.postings, party)
+        and not core_data.has_entry_account_component(entry, "Transfers")
+    )
 
 def validate_owed_transaction(entry, party):
     owed_types = {

@@ -11,7 +11,9 @@ from .utils.payslip_transactions import is_payslip_transaction, validate_payslip
 
 __plugins__ = ("validate_transactions",)
 
-def get_transaction_filename(entry, fileAccountMap):
+fileAccountMap = {}
+
+def get_transaction_filename(entry):
     err = None
 
     transaction_filename = entry.meta["filename"]
@@ -25,58 +27,64 @@ def get_transaction_filename(entry, fileAccountMap):
     return transaction_filename, err
 
 def validate_first_posting_account(entry, account):
+    err = None
     if not entry.postings[0].account == account:
-        return FirstPostingIsNotToSpecifiedAccountError(
+        err = FirstPostingIsNotToSpecifiedAccountError(
                 entry.meta,
                 f"The first posting should be to the account: {account}",
                 entry,
             )
+    return err
 
 def should_skip(entry):
-    return "skip-validation" in entry.tags
+    transaction_filename = entry.meta["filename"]
+    is_excluded_transaction = isinstance(entry, core_data.Transaction) and "exclude-entry-from-validation" in entry.tags
+    return transaction_filename.endswith("transfers.beancount") or is_excluded_transaction
 
 
 def validate_transactions(entries, unused_options_map):
     errors = []
-    fileAccountMap = {}
 
     entries_with_documents = []
     events = []
     trip_transactions = []
 
     for entry in entries:
+        if should_skip(entry):
+            continue
+
         if isinstance(entry, core_data.Balance):
             errors.extend(validate_balance_assertion(entry))
             entry.meta["document"] = entry.meta.get("statement", "")
             entries_with_documents.append(entry)
-        elif isinstance(entry, core_data.Transaction) and is_opening_balance_transaction(entry):
-            errors.extend(validate_opening_balance_transaction(entry))
 
+        elif isinstance(entry, core_data.Transaction) and is_opening_balance_transaction(entry):
             filename = entry.meta["filename"]
             account = entry.postings[0].account
             party = core_account.split(account)[1]
-
             fileAccountMap[filename] = {
                 "account": account,
                 "party": party,
             }
-        elif isinstance(entry, core_data.Transaction) and not should_skip(entry):
-            transaction_filename, err = get_transaction_filename(entry, fileAccountMap)
+
+            errors.extend(validate_opening_balance_transaction(entry))
+
+        elif isinstance(entry, core_data.Transaction):
+            transaction_filename, err = get_transaction_filename(entry)
             if err:
                 errors.append(err)
                 continue
+
             account = fileAccountMap[transaction_filename]["account"]
             party = fileAccountMap[transaction_filename]["party"]
 
             err = validate_first_posting_account(entry, account)
-            errors.append(err)
+            if err:
+                errors.append(err)
 
             if is_transfer_transaction(entry):
                 errors.extend(validate_transfer_transaction(entry, party))
 
-            print("***")
-            print(entry, account, party)
-            print("")
             if is_owed_transaction(entry, party):
                 errors.extend(validate_owed_transaction(entry, party))
 
@@ -99,5 +107,7 @@ def validate_transactions(entries, unused_options_map):
     #                 uri=entry.meta["document"],
     #             )
     #         )
+
+    # print (errors)
 
     return entries, errors
