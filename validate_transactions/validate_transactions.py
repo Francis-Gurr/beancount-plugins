@@ -101,6 +101,4 @@ def validate_transactions(entries, unused_options_map):
         errors.extend(document_errors)
         entries.extend(document_entries)
 
-    print ("----------------------------------------------------------------")
-
     return entries, errors

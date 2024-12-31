@@ -2,7 +2,7 @@ from .common import any_posting_has_metadata_key
 from .errors import PayslipTransactionError
 
 def is_payslip_transaction(entry):
-    return "payslip" in entry.tags or any_posting_has_metadata_key(entry.postings, "payslip")
+    return "payslip" in entry.tags or "payslip" in entry.meta
 
 def validate_payslip_transaction(entry, party):
     errors = []
