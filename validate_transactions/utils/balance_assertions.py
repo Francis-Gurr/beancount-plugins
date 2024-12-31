@@ -1,3 +1,4 @@
+from dateutil.relativedelta import relativedelta
 import datetime
 
 from .errors import BalanceAssertionError
@@ -14,13 +15,12 @@ def validate_balance_assertion(entry):
             )
         ]
 
-    # Check that the statement date is the day before the balance assertion date
-    valid_statement_date = entry.date - datetime.timedelta(days=1)
+    valid_statement_date = entry.date + relativedelta(months=+1) - datetime.timedelta(days=1)
     if not entry.meta["statement"].endswith(f"{valid_statement_date}.pdf"):
         errors.append(
             BalanceAssertionError(
                 entry.meta,
-                f"Statement date must be the day before the balance assertion date ({valid_statement_date})",
+                f"Statement file must be date one month from the balance assertion date ({valid_statement_date}.pdf)",
                 entry,
             )
         )
