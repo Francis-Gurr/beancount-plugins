@@ -3,30 +3,8 @@ import os
 
 from beancount.core import data as core_data
 
+from .common import any_posting_has_metadata_key
 from .errors import FileNotFoundError
-
-    # # Check that the statement is a valid file
-    # cwd = os.path.abspath(os.getcwd())
-    # statement_path = os.path.normpath(entry.meta["statement"])
-    # full_file_path = os.path.join(cwd, statement_path)
-    # print("\nfull-file-path: ", full_file_path)
-    # if os.path.isfile(full_file_path):
-    #     print("file exists")
-    #     relative_file_path = os.path.relpath(full_file_path, start=os.path.dirname(entry.meta["filename"]))
-    #     print("relative-file-path: ", relative_file_path)
-    #     # entry.meta["document"] = relative_file_path.replace("\\", "/") # Add a document field to the posting meta for fava to display the statement
-    #     if entry.meta["statement"] == "francis/2024/documents/bank-statements/starling/2024-08-31.pdf":
-    #         print("setting document")
-    #         entry.meta["document"] = "francis/2024/documents/bank-statements/starling/2024-08-31.pdf"
-    # else:
-    #     print(entry)
-    #     errors.append(
-    #         BalanceAssertionError(
-    #             entry.meta,
-    #             f"Invalid statement file path",
-    #             entry,
-    #         )
-    #     )
 
 def get_full_filepath(entry, filename):
     err = None
@@ -35,12 +13,7 @@ def get_full_filepath(entry, filename):
     filepath = os.path.normpath(filename)
     full_filepath = os.path.join(cwd, filepath)
 
-    # print("\ncwd: ", cwd)
-    # print("\nfilename: ", filename)
-    # print("\nfilepath: ", filepath)
-    # print("\nfull-file-path: ", full_filepath)
     if not os.path.isfile(full_filepath):
-        # print("file does not exist")
         err = FileNotFoundError(
             entry.meta,
             f"File not found: {full_filepath}",
@@ -51,16 +24,12 @@ def get_full_filepath(entry, filename):
 
 
 def create_document_entries(entry):
-    # print("\n\n *********************************")
-    # print("\n entry: ", entry)
-
     errors = []
     document_entries = []
 
     if "statement" in entry.meta:
         full_filepath, err = get_full_filepath(entry, entry.meta["statement"])
         if err:
-            # print("\n error: ", err)
             errors.append(err)
 
         document_entries.append(
@@ -76,7 +45,6 @@ def create_document_entries(entry):
                 links=set(),
             )
         )
-        # print("\ndocument entry: ", document_entries[-1])
     if "payslip" in entry.meta:
         # link = str(uuid.uuid4())
         # entry.links.append(link)
@@ -98,7 +66,7 @@ def create_document_entries(entry):
                 links=set(),
             )
         )
-    if "receipt" in entry.meta:
+    if isinstance(entry, core_data.Transaction) and any_posting_has_metadata_key(entry.postings, "receipt"):
         for posting in entry.postings:
             if "receipt" in posting.meta:
                 # link = str(uuid.uuid4())
