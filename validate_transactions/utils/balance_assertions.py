@@ -16,7 +16,8 @@ def validate_balance_assertion(entry):
         ]
 
     valid_statement_date = entry.date + relativedelta(months=+1) - datetime.timedelta(days=1)
-    if not entry.meta["statement"].endswith(f"{valid_statement_date}.pdf") and not entry.meta["statement"].endswith("_closing-statement.pdf"):
+    date_is_in_the_future = valid_statement_date > datetime.datetime.now().date()
+    if not entry.meta["statement"].endswith(f"{valid_statement_date}.pdf") and not entry.meta["statement"].endswith("_closing-statement.pdf") and not date_is_in_the_future:
         errors.append(
             BalanceAssertionError(
                 entry.meta,
@@ -24,5 +25,9 @@ def validate_balance_assertion(entry):
                 entry,
             )
         )
+
+    # Statement meta should be removed if date is in the future so that the document link is not created for a non-existent statement
+    if date_is_in_the_future:
+        del entry.meta["statement"]
 
     return errors
