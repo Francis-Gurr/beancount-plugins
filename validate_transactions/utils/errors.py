@@ -1,5 +1,8 @@
 import collections
 
+JournalError = collections.namedtuple(
+    "JournalError", "source message entry"
+)
 OpeningBalanceTransactionError = collections.namedtuple(
     "OpeningBalanceTransactionError", "source message entry"
 )

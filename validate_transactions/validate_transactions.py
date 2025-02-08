@@ -2,7 +2,7 @@ from beancount.core import data as core_data
 from beancount.core import account as core_account
 
 from .utils.balance_assertions import validate_balance_assertion
-from .utils.errors import FirstPostingIsNotToSpecifiedAccountError, OpeningBalanceTransactionError
+from .utils.errors import FirstPostingIsNotToSpecifiedAccountError, JournalError
 from .utils.link_documents import create_document_entries
 from .utils.opening_balance_transactions import is_opening_balance_transaction, validate_opening_balance_transaction
 from .utils.owed_transactions import is_owed_transaction, validate_owed_transaction
@@ -19,9 +19,9 @@ def get_transaction_filename(entry):
 
     transaction_filename = entry.meta["filename"]
     if transaction_filename not in fileAccountMap:
-        err = OpeningBalanceTransactionError(
+        err = JournalError(
                 entry.meta,
-                "Opening balance transaction must be specified before all following transactions",
+                "Journal party and account must be specified before all following transactions using custom directive",
                 entry,
             )
 
@@ -58,16 +58,12 @@ def validate_transactions(entries, unused_options_map):
             errors.extend(validate_balance_assertion(entry))
             entries_with_documents.append(entry)
 
-        elif isinstance(entry, core_data.Transaction) and is_opening_balance_transaction(entry):
+        elif isinstance(entry, core_data.Custom) and entry.type == "initialise_journal_file":
             filename = entry.meta["filename"]
-            account = entry.postings[0].account
-            party = core_account.split(account)[1]
             fileAccountMap[filename] = {
-                "account": account,
-                "party": party,
+                "party": entry.values[0].value,
+                "account": entry.values[1].value,
             }
-
-            errors.extend(validate_opening_balance_transaction(entry))
 
         elif isinstance(entry, core_data.Transaction):
             transaction_filename, err = get_transaction_filename(entry)
@@ -75,12 +71,15 @@ def validate_transactions(entries, unused_options_map):
                 errors.append(err)
                 continue
 
-            account = fileAccountMap[transaction_filename]["account"]
             party = fileAccountMap[transaction_filename]["party"]
+            account = fileAccountMap[transaction_filename]["account"]
 
             err = validate_first_posting_account(entry, account)
             if err:
                 errors.append(err)
+
+            if is_opening_balance_transaction(entry):
+                errors.extend(validate_opening_balance_transaction(entry))
 
             if is_transfer_transaction(entry):
                 errors.extend(validate_transfer_transaction(entry, party))
