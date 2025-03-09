@@ -4,7 +4,7 @@ from .common import any_tag_starts_with
 from .errors import TransferTransactionError
 
 def is_transfer_transaction(entry):
-    any_tag_starts_with(entry.tags, "transfer") or core_data.has_entry_account_component(entry, "Transfers")
+    return any_tag_starts_with(entry.tags, "transfer") or core_data.has_entry_account_component(entry, "Transfers")
 
 def validate_transfer_transaction(entry, party):
     transfer_types = {
