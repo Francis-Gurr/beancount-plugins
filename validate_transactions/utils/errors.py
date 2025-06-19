@@ -1,8 +1,6 @@
 import collections
 
-JournalError = collections.namedtuple(
-    "JournalError", "source message entry"
-)
+JournalError = collections.namedtuple("JournalError", "source message entry")
 OpeningBalanceTransactionError = collections.namedtuple(
     "OpeningBalanceTransactionError", "source message entry"
 )
@@ -24,5 +22,10 @@ ReceiptTransactionError = collections.namedtuple(
 PayslipTransactionError = collections.namedtuple(
     "PayslipTransactionError", "source message entry"
 )
-OwedTransactionError = collections.namedtuple("OwedTransactionError", "source message entry")
+OwedTransactionError = collections.namedtuple(
+    "OwedTransactionError", "source message entry"
+)
+EventTransactionError = collections.namedtuple(
+    "EventTransactionError", "source message entry"
+)
 FileNotFoundError = collections.namedtuple("FileNotFoundError", "source message entry")
