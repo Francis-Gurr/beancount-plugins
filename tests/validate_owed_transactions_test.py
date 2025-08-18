@@ -13,7 +13,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -30,7 +30,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -49,7 +49,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -68,7 +68,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -87,7 +87,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -105,7 +105,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -123,7 +123,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -144,7 +144,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -167,7 +167,7 @@ class TestValidateOwedTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 

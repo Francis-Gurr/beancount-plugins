@@ -11,20 +11,21 @@ class TestValidateSharedRatio(unittest.TestCase):
     @loader.load_doc()
     def test_valid_shared_ratio(self, entries, _, options_map):
         """
+        2000-01-01 open  Assets:Francis:Bank
+        2000-01-01 open  Equity:Francis:OpeningBalances
+        2000-01-01 * #opening-balance
+          Assets:Francis:Bank        1 GBP
+          Equity:Francis:OpeningBalances    -1 GBP
+
         2000-01-01 custom "autobean.share.policy" "shared"
           share-Francis: 1
           share-Leyna: 0.5
           share_enforced: TRUE
           share_prorated_included: FALSE
 
-
-        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
-
-        2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Income:Francis:GrossPay:Salary
         2000-01-01 open  Income:Francis:GrossPay:Bonus
         2000-01-01 open  Expenses:Francis:Taxes
-
         2000-01-01 * "Francis Payslip"
           Assets:Francis:Bank        200 GBP
           Income:Francis:GrossPay:Salary    -130 GBP

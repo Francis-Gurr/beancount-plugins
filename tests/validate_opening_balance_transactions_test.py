@@ -13,7 +13,7 @@ class TestValidateOpeningBalanceTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
         """
@@ -25,7 +25,7 @@ class TestValidateOpeningBalanceTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance #opening-extra-tag
+        2000-01-01 * #opening-balance #opening-extra-tag
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
         """
@@ -42,7 +42,7 @@ class TestValidateOpeningBalanceTransactions(unittest.TestCase):
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Assets:Francis:OtherBank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -2 GBP
           Assets:Francis:OtherBank        1 GBP
@@ -60,7 +60,7 @@ class TestValidateOpeningBalanceTransactions(unittest.TestCase):
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Assets:Francis:OtherBank
         2000-01-01 open  Expenses:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Expenses:Francis:OpeningBalances    -1 GBP
         """
@@ -79,7 +79,7 @@ class TestValidateOpeningBalanceTransactions(unittest.TestCase):
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Assets:Francis:OtherBank
         2000-01-01 open  Equity:Francis:Opening
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:Opening    -1 GBP
         """

@@ -9,13 +9,10 @@ from beancount.core import account
 
 from math import gcd
 
-__plugins__ = ("validate_transactions",)
+__plugins__ = ("validate_shared_ratio",)
 
 IncorrectSharedRatio = collections.namedtuple("IncorrectSharedRatio", "source message entry")
 
-# parties = ["Francis", "Leyna"]
-# fromAccounts = ["Income:Francis:GrossPay", "Income:Leyna:GrossPay"]
-# toAccounts = ["Assets:Francis:Bank", "Assets:Leyna:Bank"]
 parties = {
     "Francis": {
         "from": "Income:Francis:GrossPay",
@@ -43,9 +40,11 @@ def validate_shared_ratio(entries, unused_options_map):
     errors = []
     main_party = ""
     main_account = ""
+    sharePolicyEntry = None
     provided_ratio = {}
 
     for entry in entries:
+        # check if the entry has #payslip
         is_income_entry = (
             isinstance(entry, data.Transaction)
             and main_party in parties
@@ -58,6 +57,8 @@ def validate_shared_ratio(entries, unused_options_map):
             and entry.type == "autobean.share.policy"
             and entry.values[0].value == "shared"
         ):
+            print("custom", entry, entry.values[0].value)
+            sharePolicyEntry = entry
             provided_ratio = {
                 "Francis": entry.meta["share-Francis"],
                 "Leyna": entry.meta["share-Leyna"],
@@ -72,12 +73,13 @@ def validate_shared_ratio(entries, unused_options_map):
     if provided_ratio == {}:
         errors.append(
             IncorrectSharedRatio(
-                None,
+                sharePolicyEntry.meta,
                 "Shared ratio is not provided. Provide the shared ratio using the custom autobean.share.policy directive.",
-                None,
+                sharePolicyEntry,
             )
         )
     elif provided_ratio != actual_ratio:
+        print("here")
         actual_ratio_str = {
             "Francis": str(actual_ratio["Francis"]),
             "Leyna": str(actual_ratio["Leyna"]),
@@ -88,9 +90,9 @@ def validate_shared_ratio(entries, unused_options_map):
         }
         errors.append(
             IncorrectSharedRatio(
-                None,
+                sharePolicyEntry.meta,
                 f"Shared ratio is incorrect. Actual: {actual_ratio_str}, Provided: {provided_ratio_str}",
-                None,
+                sharePolicyEntry,
             )
         )
 

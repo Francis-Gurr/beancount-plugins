@@ -13,7 +13,7 @@ class TestValidateDefaultTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -30,7 +30,7 @@ class TestValidateDefaultTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -50,7 +50,7 @@ class TestValidateDefaultTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -66,11 +66,32 @@ class TestValidateDefaultTransactions(unittest.TestCase):
         )
 
     @loader.load_doc()
+    def test_invalid_default_transaction_with_receipt_metadata(self, entries, _, options_map):
+        """
+        2000-01-01 open  Assets:Francis:Bank
+        2000-01-01 open  Equity:Francis:OpeningBalances
+        2000-01-01 * #opening-balance
+          Assets:Francis:Bank        1 GBP
+          Equity:Francis:OpeningBalances    -1 GBP
+
+        2000-01-01 open  Expenses:Francis:Test
+        2000-01-01 *
+          Assets:Francis:Bank        1 GBP
+          Expenses:Francis:Test -1 GBP
+            receipt: "1234"
+        """
+        _, errors = validate_transactions(entries, options_map)
+        self.assertEqual(1, len(errors))
+        self.assertEqual(
+            errors[0].message, "Transactions with receipt metadata must have the 'valuables' tag"
+        )
+
+    @loader.load_doc()
     def test_invalid_default_transaction_to_another_party(self, entries, _, options_map):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
@@ -91,26 +112,29 @@ class TestValidateDefaultTransactions(unittest.TestCase):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
         2000-01-01 open  Assets:Francis:Transfers:Elsewhere
         2000-01-01 open  Assets:OtherParty:Bank
+        2000-01-01 open  Expenses:Francis:Test
         2000-01-01 *
           Assets:Francis:Transfers:Elsewhere -1 GBP
-          Assets:Francis:Bank        2 GBP
+          Assets:Francis:Bank        3 GBP
           Assets:OtherParty:Bank -1 GBP
+          Expenses:Francis:Test -1 GBP
+            receipt: "1234"
         """
         _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(3, len(errors))
+        self.assertEqual(4, len(errors))
 
     @loader.load_doc()
     def test_skip_validation(self, entries, _, options_map):
         """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
+        2000-01-01 * #opening-balance
           Assets:Francis:Bank        1 GBP
           Equity:Francis:OpeningBalances    -1 GBP
 
