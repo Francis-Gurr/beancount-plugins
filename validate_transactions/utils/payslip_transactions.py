@@ -1,3 +1,4 @@
+from .common import any_posting_has_metadata_key
 from .errors import PayslipTransactionError
 
 def is_payslip_transaction(entry):
@@ -10,16 +11,16 @@ def validate_payslip_transaction(entry, party):
         errors.append(
             PayslipTransactionError(
                 entry.meta,
-                "Missing required tag of 'payslip'",
+                f"Missing required tag of 'payslip'",
                 entry,
             )
         )
 
-    if "payslip" not in entry.meta:
+    if not "payslip" in entry.meta:
         errors.append(
             PayslipTransactionError(
                 entry.meta,
-                "Missing required metadata of 'payslip'",
+                f"Missing required metadata of 'payslip'",
                 entry,
             )
         )
