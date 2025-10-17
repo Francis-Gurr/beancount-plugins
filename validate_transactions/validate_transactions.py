@@ -1,8 +1,8 @@
 from beancount.core import data as core_data
-from beancount.core import account as core_account
 
 from .utils.balance_assertions import validate_balance_assertion
 from .utils.errors import FirstPostingIsNotToSpecifiedAccountError, JournalError
+from .utils.events import validate_event, is_linked_event, get_event_id, is_event_transaction, validate_event_transaction
 from .utils.link_documents import create_document_entries
 from .utils.opening_balance_transactions import is_opening_balance_transaction, validate_opening_balance_transaction
 from .utils.owed_transactions import is_owed_transaction, validate_owed_transaction
@@ -47,8 +47,7 @@ def validate_transactions(entries, unused_options_map):
     errors = []
 
     entries_with_documents = []
-    events = []
-    trip_transactions = []
+    event_ids = []
 
     for entry in entries:
         if should_skip(entry):
@@ -64,6 +63,14 @@ def validate_transactions(entries, unused_options_map):
                 "party": entry.values[0].value,
                 "account": entry.values[1].value,
             }
+
+        if isinstance(entry, core_data.Event):
+            errors.extend(validate_event(entry))
+            if is_linked_event(entry):
+                id, err = get_event_id(entry, event_ids)
+                event_ids.append(id)
+                if err:
+                    errors.append(err)
 
         elif isinstance(entry, core_data.Transaction):
             transaction_filename, err = get_transaction_filename(entry)
@@ -94,6 +101,9 @@ def validate_transactions(entries, unused_options_map):
             if is_payslip_transaction(entry):
                 errors.extend(validate_payslip_transaction(entry, party))
                 entries_with_documents.append(entry)
+
+            if is_event_transaction(entry):
+                errors.extend(validate_event_transaction(entry, event_ids))
 
     for entry in entries_with_documents:
         document_entries, document_errors = create_document_entries(entry)
