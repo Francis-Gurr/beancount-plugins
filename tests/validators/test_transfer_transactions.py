@@ -1,16 +1,10 @@
-import unittest
-
-from ..validate_transactions import validate_transactions
-from beancount.core import data
-from beancount.parser import options
-from beancount import loader
+from beancount_plugins.validators.transactions import validate_transactions
 
 
-class TestValidateTransferTransactions(unittest.TestCase):
+def test_valid_from_transfer_transaction(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
 
-    @loader.load_doc()
-    def test_valid_from_transfer_transaction(self, entries, _, options_map):
-        """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -21,13 +15,15 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer from self: Other Bank" #transfer-from-self
           Assets:Francis:Bank        1 GBP
           Assets:Francis:Transfers:Self    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(0, len(errors))
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 0
 
-    @loader.load_doc()
-    def test_valid_to_transfer_transaction(self, entries, _, options_map):
-        """
+
+def test_valid_to_transfer_transaction(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -38,13 +34,15 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer to self: Other Bank" #transfer-to-self
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:Transfers:Self    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(0, len(errors))
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 0
 
-    @loader.load_doc()
-    def test_invalid_transfer_transaction_multiple_tags(self, entries, _, options_map):
-        """
+
+def test_invalid_transfer_transaction_multiple_tags(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -55,14 +53,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer to self: Other Bank" #transfer-to-self #savings
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:Transfers:Self    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Transfer transaction must have exactly one tag")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Transfer transaction must have exactly one tag"
 
-    @loader.load_doc()
-    def test_invalid_transfer_transaction_tag(self, entries, _, options_map):
-        """
+
+def test_invalid_transfer_transaction_tag(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -73,14 +73,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer to self: Other Bank" #transfer-tag
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:Transfers:Self    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Invalid transfer tag: transfer-tag")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Invalid transfer tag: transfer-tag"
 
-    @loader.load_doc()
-    def test_invalid_transfer_transaction_payee(self, entries, _, options_map):
-        """
+
+def test_invalid_transfer_transaction_payee(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -91,14 +93,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Francis" "Transfer to self: Other Bank" #transfer-to-self
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:Transfers:Self    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Payee must be Self")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Payee must be Self"
 
-    @loader.load_doc()
-    def test_invalid_transfer_transaction_narration(self, entries, _, options_map):
-        """
+
+def test_invalid_transfer_transaction_narration(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -109,14 +113,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer to Other Bank" #transfer-to-self
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:Transfers:Self    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Narration must start with Transfer to self: ")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Narration must start with Transfer to self: "
 
-    @loader.load_doc()
-    def test_invalid_transfer_transaction_multiple_postings(self, entries, _, options_map):
-        """
+
+def test_invalid_transfer_transaction_multiple_postings(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -128,16 +134,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer to self: Other Bank" #transfer-to-self
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:OtherBank    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(
-            errors[0].message, "Second posting must be to: Assets:Francis:Transfers:Self"
-        )
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Second posting must be to: Assets:Francis:Transfers:Self"
 
-    @loader.load_doc()
-    def test_invalid_transfer_transaction_second_posting_account(self, entries, _, options_map):
-        """
+
+def test_invalid_transfer_transaction_second_posting_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -150,16 +156,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
           Assets:Francis:Bank        -2 GBP
           Assets:Francis:Transfers:Self    1 GBP
           Assets:Francis:OtherBank    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Transfer transaction must have exactly two postings")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Transfer transaction must have exactly two postings"
 
-    @loader.load_doc()
-    def test_invalid_from_transfer_transaction_second_posting_amount_sign(
-        self, entries, _, options_map
-    ):
-        """
+
+def test_invalid_from_transfer_transaction_second_posting_amount_sign(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -170,18 +176,16 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer from self: Other Bank" #transfer-from-self
           Assets:Francis:Bank        -1 GBP
           Assets:Francis:Transfers:Self    1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(
-            errors[0].message, "First posting amount must be positive for transfer from"
-        )
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "First posting amount must be positive for transfer from"
 
-    @loader.load_doc()
-    def test_invalid_to_transfer_transaction_second_posting_amount_sign(
-        self, entries, _, options_map
-    ):
-        """
+
+def test_invalid_to_transfer_transaction_second_posting_amount_sign(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -192,11 +196,7 @@ class TestValidateTransferTransactions(unittest.TestCase):
         2000-01-01 * "Self" "Transfer to self: Other Bank" #transfer-to-self
           Assets:Francis:Bank        1 GBP
           Assets:Francis:Transfers:Self    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "First posting amount must be negative for transfer to")
-
-
-if __name__ == "__main__":
-    unittest.main()
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "First posting amount must be negative for transfer to"

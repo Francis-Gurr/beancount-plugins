@@ -1,16 +1,10 @@
-import unittest
-
-from ..validate_transactions import validate_transactions
-from beancount.core import data
-from beancount.parser import options
-from beancount import loader
+from beancount_plugins.validators.transactions import validate_transactions
 
 
-class TestValidateOwedTransactions(unittest.TestCase):
+def test_valid_owed_transaction_to_expense_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
 
-    @loader.load_doc()
-    def test_valid_owed_transaction_to_expense_account(self, entries, _, options_map):
-        """
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -21,13 +15,15 @@ class TestValidateOwedTransactions(unittest.TestCase):
         2000-01-01 * "Gift Shop" "Leyna bought a souvenir" #owed-by-leyna #holiday
           Assets:Francis:Bank        1 GBP
           Expenses:Leyna:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(0, len(errors))
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 0
 
-    @loader.load_doc()
-    def test_valid_owed_transaction_to_assets_receivables_account(self, entries, _, options_map):
-        """
+
+def test_valid_owed_transaction_to_assets_receivables_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -38,15 +34,15 @@ class TestValidateOwedTransactions(unittest.TestCase):
         2000-01-01 * "Workplace" "Leyna bought something for work" #owed-by-leyna
           Assets:Francis:Bank        1 GBP
           Assets:Leyna:Receivables:Work    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(0, len(errors))
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 0
 
-    @loader.load_doc()
-    def test_valid_owed_transaction_expense_and_assets_receivables_account(
-        self, entries, _, options_map
-    ):
-        """
+
+def test_valid_owed_transaction_expense_and_assets_receivables_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -59,13 +55,15 @@ class TestValidateOwedTransactions(unittest.TestCase):
           Assets:Francis:Bank        2 GBP
           Assets:Leyna:Receivables:Work    -1 GBP
           Expenses:Leyna:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(0, len(errors))
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 0
 
-    @loader.load_doc()
-    def test_valid_owed_transaction_multiple_parties(self, entries, _, options_map):
-        """
+
+def test_valid_owed_transaction_multiple_parties(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -78,13 +76,15 @@ class TestValidateOwedTransactions(unittest.TestCase):
           Assets:Francis:Bank        2 GBP
           Assets:Leyna:Receivables:Work    -1 GBP
           Expenses:Shared:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(0, len(errors))
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 0
 
-    @loader.load_doc()
-    def test_invalid_owed_transaction_tag(self, entries, _, options_map):
-        """
+
+def test_invalid_owed_transaction_tag(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -95,14 +95,16 @@ class TestValidateOwedTransactions(unittest.TestCase):
         2000-01-01 * "Gift Shop" "Leyna bought a souvenir" #owed-by #holiday
           Assets:Francis:Bank        1 GBP
           Expenses:Leyna:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Invalid owed tag: owed-by")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Invalid owed tag: owed-by"
 
-    @loader.load_doc()
-    def test_invalid_owed_transaction_tag_same_party(self, entries, _, options_map):
-        """
+
+def test_invalid_owed_transaction_tag_same_party(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -113,14 +115,16 @@ class TestValidateOwedTransactions(unittest.TestCase):
         2000-01-01 * "Gift Shop" "Leyna bought a souvenir" #owed-by-francis #holiday
           Assets:Francis:Bank        1 GBP
           Expenses:Leyna:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(errors[0].message, "Owed tag must be for another party")
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == "Owed tag must be for another party"
 
-    @loader.load_doc()
-    def test_invalid_owed_transaction_missing_account(self, entries, _, options_map):
-        """
+
+def test_invalid_owed_transaction_missing_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -131,17 +135,18 @@ class TestValidateOwedTransactions(unittest.TestCase):
         2000-01-01 * "Gift Shop" "Leyna bought a souvenir" #owed-by-leyna #holiday
           Assets:Francis:Bank        1 GBP
           Expenses:Francis:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(
-            errors[0].message,
-            "Expected at least one posting to an account starting with: ['Expenses:Leyna', 'Assets:Leyna:Receivables']",
-        )
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == (
+        "Expected at least one posting to an account starting with: ['Expenses:Leyna', 'Assets:Leyna:Receivables']"
+    )
 
-    @loader.load_doc()
-    def test_invalid_owed_transaction_wrong_expense_account(self, entries, _, options_map):
-        """
+
+def test_invalid_owed_transaction_wrong_expense_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -154,17 +159,21 @@ class TestValidateOwedTransactions(unittest.TestCase):
           Assets:Francis:Bank        2 GBP
           Expenses:Leyna:Souvenirs    -1 GBP
           Expenses:OtherParty:Souvenirs    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(
-            errors[0].message,
-            "Posting to an account that does not belong to the party: Francis, or to any of the owed parties' allowed accounts: ['Expenses:Leyna', 'Assets:Leyna:Receivables']. If this was intentional, please use the appropriate tags.",
-        )
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == (
+        "Posting to an account that does not belong to the party: Francis, "
+        "or to any of the owed parties' allowed accounts: "
+        "['Expenses:Leyna', 'Assets:Leyna:Receivables']. "
+        "If this was intentional, please use the appropriate tags."
+    )
 
-    @loader.load_doc()
-    def test_invalid_owed_transaction_wrong_receivables_account(self, entries, _, options_map):
-        """
+
+def test_invalid_owed_transaction_wrong_receivables_account(load_doc):
+    entries, options_map = load_doc("""
+        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
+
         2000-01-01 open  Assets:Francis:Bank
         2000-01-01 open  Equity:Francis:OpeningBalances
         2000-01-01 * #journal-opening-balance
@@ -177,14 +186,12 @@ class TestValidateOwedTransactions(unittest.TestCase):
           Assets:Francis:Bank        2 GBP
           Expenses:Leyna:Souvenirs    -1 GBP
           Assets:Receivables:OtherParty:Work    -1 GBP
-        """
-        _, errors = validate_transactions(entries, options_map)
-        self.assertEqual(1, len(errors))
-        self.assertEqual(
-            errors[0].message,
-            "Posting to an account that does not belong to the party: Francis, or to any of the owed parties' allowed accounts: ['Expenses:Leyna', 'Assets:Leyna:Receivables']. If this was intentional, please use the appropriate tags.",
-        )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    """)
+    _, errors = validate_transactions(entries, options_map)
+    assert len(errors) == 1
+    assert errors[0].message == (
+        "Posting to an account that does not belong to the party: Francis, "
+        "or to any of the owed parties' allowed accounts: "
+        "['Expenses:Leyna', 'Assets:Leyna:Receivables']. "
+        "If this was intentional, please use the appropriate tags."
+    )
