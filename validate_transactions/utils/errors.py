@@ -1,5 +1,11 @@
 import collections
 
+EventError = collections.namedtuple(
+    "EventError", "source message entry"
+)
+EventTransactionError = collections.namedtuple(
+    "EventTransactionError", "source message entry"
+)
 JournalError = collections.namedtuple(
     "JournalError", "source message entry"
 )
