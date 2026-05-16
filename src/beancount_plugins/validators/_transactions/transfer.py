@@ -88,7 +88,8 @@ def validate_transfer_transaction(entry: data.Transaction, party: str) -> list[T
     if entry.payee != transfer_type.payee:
         errors.append(TransferTransactionError(src, f"Payee must be {transfer_type.payee}", entry))
 
-    if not entry.narration.startswith(transfer_type.narration_prefix):
+    narration = entry.narration or ""
+    if not narration.startswith(transfer_type.narration_prefix):
         errors.append(
             TransferTransactionError(
                 src,
@@ -101,31 +102,36 @@ def validate_transfer_transaction(entry: data.Transaction, party: str) -> list[T
         errors.append(TransferTransactionError(src, "Transfer transaction must have exactly two postings", entry))
         return errors
 
-    if entry.postings[1].account != expected_account:
+    posting_0, posting_1 = entry.postings[0], entry.postings[1]
+    posting_0_lineno = posting_0.meta["lineno"] if posting_0.meta is not None else 0
+    posting_1_lineno = posting_1.meta["lineno"] if posting_1.meta is not None else 0
+
+    if posting_1.account != expected_account:
         errors.append(
             TransferTransactionError(
-                data.new_metadata(PLUGIN_NAME, entry.postings[1].meta["lineno"]),
+                data.new_metadata(PLUGIN_NAME, posting_1_lineno),
                 f"Second posting must be to: {expected_account}",
-                entry.postings[1],
+                posting_1,
             )
         )
 
-    if type_key.startswith("transfer-from") and entry.postings[0].units.number < 0:
-        errors.append(
-            TransferTransactionError(
-                data.new_metadata(PLUGIN_NAME, entry.postings[0].meta["lineno"]),
-                "First posting amount must be positive for transfer from",
-                entry.postings[0],
+    posting_0_number = posting_0.units.number if posting_0.units is not None else None
+    if posting_0_number is not None:
+        if type_key.startswith("transfer-from") and posting_0_number < 0:
+            errors.append(
+                TransferTransactionError(
+                    data.new_metadata(PLUGIN_NAME, posting_0_lineno),
+                    "First posting amount must be positive for transfer from",
+                    posting_0,
+                )
             )
-        )
-
-    if type_key.startswith("transfer-to") and entry.postings[0].units.number > 0:
-        errors.append(
-            TransferTransactionError(
-                data.new_metadata(PLUGIN_NAME, entry.postings[0].meta["lineno"]),
-                "First posting amount must be negative for transfer to",
-                entry.postings[0],
+        if type_key.startswith("transfer-to") and posting_0_number > 0:
+            errors.append(
+                TransferTransactionError(
+                    data.new_metadata(PLUGIN_NAME, posting_0_lineno),
+                    "First posting amount must be negative for transfer to",
+                    posting_0,
+                )
             )
-        )
 
     return errors

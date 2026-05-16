@@ -67,7 +67,8 @@ def validate_owed_transaction(
         )
 
         if party_of_posting != party and not posting_account_is_allowed:
-            posting_src = data.new_metadata(PLUGIN_NAME, posting.meta["lineno"])
+            posting_lineno = posting.meta["lineno"] if posting.meta is not None else 0
+            posting_src = data.new_metadata(PLUGIN_NAME, posting_lineno)
             errors.append(
                 PostingToAnotherPartyError(
                     posting_src,

@@ -43,7 +43,7 @@ def validate_receipt_transaction(entry: data.Transaction) -> list[ReceiptTransac
             entry,
         )
         for posting in entry.postings[1:]
-        if "receipt" in posting.meta and not posting.account.startswith("Expenses")
+        if posting.meta is not None and "receipt" in posting.meta and not posting.account.startswith("Expenses")
     )
 
     return errors

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 def any_posting_has_metadata_key(postings: list[data.Posting], metadata_key: str) -> bool:
-    return any(metadata_key in posting.meta for posting in postings)
+    return any(posting.meta is not None and metadata_key in posting.meta for posting in postings)
 
 
 def any_tag_starts_with(tags: frozenset[str] | set[str], prefix: str) -> bool:
