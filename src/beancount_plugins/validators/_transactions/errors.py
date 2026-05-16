@@ -18,6 +18,12 @@ class OpeningBalanceTransactionError(NamedTuple):
     entry: data.Directive | None
 
 
+class MissingOpeningBalanceError(NamedTuple):
+    source: data.Meta | None
+    message: str
+    entry: data.Directive | None
+
+
 class FirstPostingIsNotToSpecifiedAccountError(NamedTuple):
     source: data.Meta | None
     message: str
@@ -55,18 +61,6 @@ class PayslipTransactionError(NamedTuple):
 
 
 class OwedTransactionError(NamedTuple):
-    source: data.Meta | None
-    message: str
-    entry: data.Directive | None
-
-
-class InvalidTransferTransaction(NamedTuple):
-    source: data.Meta | None
-    message: str
-    entry: data.Directive | None
-
-
-class InvalidValuablesTransaction(NamedTuple):
     source: data.Meta | None
     message: str
     entry: data.Directive | None

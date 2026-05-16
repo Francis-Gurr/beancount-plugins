@@ -1,7 +1,11 @@
 from beancount.core import data
 
 from ._transactions.balance_assertions import validate_balance_assertion
-from ._transactions.errors import FirstPostingIsNotToSpecifiedAccountError, JournalError
+from ._transactions.errors import (
+    FirstPostingIsNotToSpecifiedAccountError,
+    JournalError,
+    MissingOpeningBalanceError,
+)
 from ._transactions.events import (
     get_event_id,
     is_event_transaction,
@@ -88,6 +92,24 @@ def _validate_transaction(
     return errors, needs_documents
 
 
+def _check_missing_opening_balance(
+    entry: data.Transaction,
+    transaction_filename: str,
+    files_seen: set[str],
+) -> list[MissingOpeningBalanceError]:
+    is_first = transaction_filename not in files_seen
+    files_seen.add(transaction_filename)
+    if is_first and not is_opening_balance_transaction(entry):
+        return [
+            MissingOpeningBalanceError(
+                entry.meta,
+                "Journal opening balance transaction must be specified before transactions",
+                entry,
+            )
+        ]
+    return []
+
+
 def _process_event(entry: data.Event, event_ids: list[str]) -> list[object]:
     errors: list[object] = list(validate_event(entry))
     if is_linked_event(entry):
@@ -106,6 +128,7 @@ def validate_transactions(
     entries_with_documents: list[data.Balance | data.Transaction] = []
     event_ids: list[str] = []
     file_account_map: dict[str, dict[str, str]] = {}
+    files_with_first_transaction_seen: set[str] = set()
 
     for entry in entries:
         if should_skip(entry):
@@ -130,6 +153,10 @@ def validate_transactions(
             if err:
                 errors.append(err)
                 continue
+
+            errors.extend(
+                _check_missing_opening_balance(entry, transaction_filename, files_with_first_transaction_seen)
+            )
 
             party = file_account_map[transaction_filename]["party"]
             account = file_account_map[transaction_filename]["account"]
