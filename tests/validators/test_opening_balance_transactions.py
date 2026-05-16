@@ -1,5 +1,3 @@
-import pytest
-
 from beancount_plugins.validators.transactions import validate_transactions
 
 
@@ -17,9 +15,6 @@ def test_valid_opening_balance_transaction(load_doc):
     assert len(errors) == 0
 
 
-@pytest.mark.xfail(
-    reason="TODO: is_opening_balance_transaction checks for tag 'opening-balance' but tests use '#journal-opening-balance'; validator never fires",
-)
 def test_invalid_opening_balance_transaction_tags(load_doc):
     entries, options_map = load_doc("""
         2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
@@ -35,9 +30,6 @@ def test_invalid_opening_balance_transaction_tags(load_doc):
     assert errors[0].message == "Journal opening balance transaction must have exactly one tag"
 
 
-@pytest.mark.xfail(
-    reason="TODO: is_opening_balance_transaction checks for tag 'opening-balance' but tests use '#journal-opening-balance'; validator never fires",
-)
 def test_invalid_opening_balance_transaction_multiple_postings(load_doc):
     entries, options_map = load_doc("""
         2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
@@ -55,9 +47,6 @@ def test_invalid_opening_balance_transaction_multiple_postings(load_doc):
     assert errors[0].message == "Journal opening balance transaction must have exactly two postings"
 
 
-@pytest.mark.xfail(
-    reason="TODO: is_opening_balance_transaction checks for tag 'opening-balance' but tests use '#journal-opening-balance'; validator never fires",
-)
 def test_invalid_opening_balance_transaction_not_equity(load_doc):
     entries, options_map = load_doc("""
         2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
@@ -74,9 +63,6 @@ def test_invalid_opening_balance_transaction_not_equity(load_doc):
     assert errors[0].message == "Equity account must be the second posting"
 
 
-@pytest.mark.xfail(
-    reason="TODO: is_opening_balance_transaction checks for tag 'opening-balance' but tests use '#journal-opening-balance'; validator never fires",
-)
 def test_invalid_opening_balance_transaction_not_opening_balance_component(load_doc):
     entries, options_map = load_doc("""
         2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
@@ -93,9 +79,6 @@ def test_invalid_opening_balance_transaction_not_opening_balance_component(load_
     assert errors[0].message == "Second posting account must have a component of OpeningBalances"
 
 
-@pytest.mark.xfail(
-    reason="TODO: no validator emits 'must be specified before transactions'; behavior unimplemented",
-)
 def test_invalid_opening_balance_transaction_no_opening_balance(load_doc):
     entries, options_map = load_doc("""
         2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"

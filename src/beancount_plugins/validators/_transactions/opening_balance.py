@@ -7,7 +7,7 @@ EXPECTED_POSTINGS = 2
 
 
 def is_opening_balance_transaction(entry: data.Transaction) -> bool:
-    return "opening-balance" in entry.tags
+    return "journal-opening-balance" in entry.tags
 
 
 def validate_opening_balance_transaction(entry: data.Transaction) -> list[OpeningBalanceTransactionError]:
