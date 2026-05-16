@@ -28,7 +28,7 @@ def create_document_entries(
     errors: list[DocumentFileNotFoundError] = []
     document_entries: list[data.Document] = []
 
-    if "statement" in entry.meta:
+    if "statement" in entry.meta and isinstance(entry, data.Balance):
         full_filepath, err = get_full_filepath(entry, entry.meta["statement"])
         if err:
             errors.append(err)
@@ -46,7 +46,7 @@ def create_document_entries(
                 links=set(),
             )
         )
-    if "payslip" in entry.meta:
+    if "payslip" in entry.meta and isinstance(entry, data.Transaction) and len(entry.postings) > 1:
         full_filepath, err = get_full_filepath(entry, entry.meta["payslip"])
         if err:
             errors.append(err)

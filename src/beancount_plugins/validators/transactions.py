@@ -92,22 +92,20 @@ def _validate_transaction(
     return errors, needs_documents
 
 
-def _check_missing_opening_balance(
+def _is_missing_opening_balance(
     entry: data.Transaction,
     transaction_filename: str,
     files_seen: set[str],
-) -> list[MissingOpeningBalanceError]:
-    is_first = transaction_filename not in files_seen
+) -> bool:
+    """Return True if `entry` is the first transaction in its file and is not the opening balance."""
+    if transaction_filename in files_seen:
+        return False
+    return not is_opening_balance_transaction(entry)
+
+
+def _record_first_transaction_for_file(transaction_filename: str, files_seen: set[str]) -> None:
+    """Record that we have seen the first transaction for `transaction_filename`."""
     files_seen.add(transaction_filename)
-    if is_first and not is_opening_balance_transaction(entry):
-        return [
-            MissingOpeningBalanceError(
-                entry.meta,
-                "Journal opening balance transaction must be specified before transactions",
-                entry,
-            )
-        ]
-    return []
 
 
 def _process_event(entry: data.Event, event_ids: list[str]) -> list[object]:
@@ -119,6 +117,35 @@ def _process_event(entry: data.Event, event_ids: list[str]) -> list[object]:
         elif event_id is not None:
             event_ids.append(event_id)
     return errors
+
+
+def _process_transaction(
+    entry: data.Transaction,
+    file_account_map: dict[str, dict[str, str]],
+    files_seen: set[str],
+    event_ids: list[str],
+) -> tuple[list[object], bool]:
+    """Validate a Transaction. Returns (errors, needs_document_entries)."""
+    transaction_filename, journal_err = get_transaction_filename(entry, file_account_map)
+    if journal_err:
+        return [journal_err], False
+
+    errors: list[object] = []
+    if _is_missing_opening_balance(entry, transaction_filename, files_seen):
+        errors.append(
+            MissingOpeningBalanceError(
+                entry.meta,
+                "Journal opening balance transaction must be specified before transactions",
+                entry,
+            )
+        )
+    _record_first_transaction_for_file(transaction_filename, files_seen)
+
+    party = file_account_map[transaction_filename]["party"]
+    account = file_account_map[transaction_filename]["account"]
+    txn_errors, needs_documents = _validate_transaction(entry, party, account, event_ids)
+    errors.extend(txn_errors)
+    return errors, needs_documents
 
 
 def validate_transactions(
@@ -149,19 +176,9 @@ def validate_transactions(
             errors.extend(_process_event(entry, event_ids))
 
         elif isinstance(entry, data.Transaction):
-            transaction_filename, err = get_transaction_filename(entry, file_account_map)
-            if err:
-                errors.append(err)
-                continue
-
-            errors.extend(
-                _check_missing_opening_balance(entry, transaction_filename, files_with_first_transaction_seen)
+            txn_errors, needs_documents = _process_transaction(
+                entry, file_account_map, files_with_first_transaction_seen, event_ids
             )
-
-            party = file_account_map[transaction_filename]["party"]
-            account = file_account_map[transaction_filename]["account"]
-
-            txn_errors, needs_documents = _validate_transaction(entry, party, account, event_ids)
             errors.extend(txn_errors)
             if needs_documents:
                 entries_with_documents.append(entry)
