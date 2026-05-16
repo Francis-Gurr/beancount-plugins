@@ -1,23 +1,25 @@
+"""Validate beancount Balance directives have a matching statement document."""
+
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
 
+from beancount.core import data
 from dateutil.relativedelta import relativedelta
 
 from .errors import BalanceAssertionError
 
-if TYPE_CHECKING:
-    from beancount.core import data
+PLUGIN_NAME = "validate_transactions"
 
 
 def validate_balance_assertion(entry: data.Balance) -> list[BalanceAssertionError]:
+    src = data.new_metadata(PLUGIN_NAME, entry.meta["lineno"])
     errors: list[BalanceAssertionError] = []
 
     if "statement" not in entry.meta:
         return [
             BalanceAssertionError(
-                entry.meta,
+                src,
                 "Missing required metadata of 'statement'",
                 entry,
             )
@@ -32,15 +34,15 @@ def validate_balance_assertion(entry: data.Balance) -> list[BalanceAssertionErro
     ):
         errors.append(
             BalanceAssertionError(
-                entry.meta,
+                src,
                 f"Statement file must be date one month from the balance assertion date "
                 f"({valid_statement_date}.pdf), or a closing statement (_closing-statement.pdf)",
                 entry,
             )
         )
 
-    # Statement meta should be removed if date is in the future so that the document link
-    # is not created for a non-existent statement
+    # Strip the statement meta on future-dated balances so the document link
+    # doesn't reference a file that doesn't exist yet.
     if date_is_in_the_future:
         del entry.meta["statement"]
 

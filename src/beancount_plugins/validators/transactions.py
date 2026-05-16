@@ -1,3 +1,5 @@
+"""Validate transactions against this ledger's per-journal and per-tag rules."""
+
 from beancount.core import data
 
 from ._transactions.balance_assertions import validate_balance_assertion
@@ -5,6 +7,7 @@ from ._transactions.errors import (
     FirstPostingIsNotToSpecifiedAccountError,
     JournalError,
     MissingOpeningBalanceError,
+    ValidationError,
 )
 from ._transactions.events import (
     get_event_id,
@@ -22,34 +25,37 @@ from ._transactions.transfer import is_transfer_transaction, validate_transfer_t
 
 __plugins__ = ("validate_transactions",)
 
+PLUGIN_NAME = "validate_transactions"
+
+
+def _source(entry: data.Directive) -> data.Meta:
+    return data.new_metadata(PLUGIN_NAME, entry.meta["lineno"])
+
 
 def get_transaction_filename(
     entry: data.Transaction, file_account_map: dict[str, dict[str, str]]
 ) -> tuple[str, JournalError | None]:
-    err = None
-
     transaction_filename = entry.meta["filename"]
-    if transaction_filename not in file_account_map:
-        err = JournalError(
-            entry.meta,
-            "Journal party and account must be specified before all following transactions using custom directive",
-            entry,
-        )
-
+    if transaction_filename in file_account_map:
+        return transaction_filename, None
+    err = JournalError(
+        _source(entry),
+        "Journal party and account must be specified before all following transactions using custom directive",
+        entry,
+    )
     return transaction_filename, err
 
 
 def validate_first_posting_account(
     entry: data.Transaction, account: str
 ) -> FirstPostingIsNotToSpecifiedAccountError | None:
-    err = None
-    if entry.postings[0].account != account:
-        err = FirstPostingIsNotToSpecifiedAccountError(
-            entry.meta,
-            f"The first posting should be to the account: {account}",
-            entry,
-        )
-    return err
+    if entry.postings[0].account == account:
+        return None
+    return FirstPostingIsNotToSpecifiedAccountError(
+        _source(entry),
+        f"The first posting should be to the account: {account}",
+        entry,
+    )
 
 
 def should_skip(entry: data.Directive) -> bool:
@@ -60,9 +66,9 @@ def should_skip(entry: data.Directive) -> bool:
 
 def _validate_transaction(
     entry: data.Transaction, party: str, account: str, event_ids: list[str]
-) -> tuple[list[object], bool]:
+) -> tuple[list[ValidationError], bool]:
     """Run all per-transaction validators. Return (errors, needs_document_entries)."""
-    errors: list[object] = []
+    errors: list[ValidationError] = []
     needs_documents = False
 
     err = validate_first_posting_account(entry, account)
@@ -108,8 +114,8 @@ def _record_first_transaction_for_file(transaction_filename: str, files_seen: se
     files_seen.add(transaction_filename)
 
 
-def _process_event(entry: data.Event, event_ids: list[str]) -> list[object]:
-    errors: list[object] = list(validate_event(entry))
+def _process_event(entry: data.Event, event_ids: list[str]) -> list[ValidationError]:
+    errors: list[ValidationError] = list(validate_event(entry))
     if is_linked_event(entry):
         event_id, err = get_event_id(entry, event_ids)
         if err:
@@ -124,17 +130,17 @@ def _process_transaction(
     file_account_map: dict[str, dict[str, str]],
     files_seen: set[str],
     event_ids: list[str],
-) -> tuple[list[object], bool]:
+) -> tuple[list[ValidationError], bool]:
     """Validate a Transaction. Returns (errors, needs_document_entries)."""
     transaction_filename, journal_err = get_transaction_filename(entry, file_account_map)
     if journal_err:
         return [journal_err], False
 
-    errors: list[object] = []
+    errors: list[ValidationError] = []
     if _is_missing_opening_balance(entry, transaction_filename, files_seen):
         errors.append(
             MissingOpeningBalanceError(
-                entry.meta,
+                _source(entry),
                 "Journal opening balance transaction must be specified before transactions",
                 entry,
             )
@@ -150,8 +156,8 @@ def _process_transaction(
 
 def validate_transactions(
     entries: data.Entries, _unused_options_map: data.Options
-) -> tuple[data.Entries, list[object]]:
-    errors: list[object] = []
+) -> tuple[data.Entries, list[ValidationError]]:
+    errors: list[ValidationError] = []
     entries_with_documents: list[data.Balance | data.Transaction] = []
     event_ids: list[str] = []
     file_account_map: dict[str, dict[str, str]] = {}
@@ -161,27 +167,25 @@ def validate_transactions(
         if should_skip(entry):
             continue
 
-        if isinstance(entry, data.Balance):
-            errors.extend(validate_balance_assertion(entry))
-            entries_with_documents.append(entry)
-
-        elif isinstance(entry, data.Custom) and entry.type == "initialise_journal_file":
-            filename = entry.meta["filename"]
-            file_account_map[filename] = {
-                "party": entry.values[0].value,
-                "account": entry.values[1].value,
-            }
-
-        elif isinstance(entry, data.Event):
-            errors.extend(_process_event(entry, event_ids))
-
-        elif isinstance(entry, data.Transaction):
-            txn_errors, needs_documents = _process_transaction(
-                entry, file_account_map, files_with_first_transaction_seen, event_ids
-            )
-            errors.extend(txn_errors)
-            if needs_documents:
+        match entry:
+            case data.Balance():
+                errors.extend(validate_balance_assertion(entry))
                 entries_with_documents.append(entry)
+            case data.Custom(type="initialise_journal_file"):
+                filename = entry.meta["filename"]
+                file_account_map[filename] = {
+                    "party": entry.values[0].value,
+                    "account": entry.values[1].value,
+                }
+            case data.Event():
+                errors.extend(_process_event(entry, event_ids))
+            case data.Transaction():
+                txn_errors, needs_documents = _process_transaction(
+                    entry, file_account_map, files_with_first_transaction_seen, event_ids
+                )
+                errors.extend(txn_errors)
+                if needs_documents:
+                    entries_with_documents.append(entry)
 
     for entry in entries_with_documents:
         document_entries, document_errors = create_document_entries(entry)
