@@ -1,12 +1,16 @@
-from beancount.core import data as core_data
+from beancount.core import data
 
 from .common import any_tag_starts_with
 from .errors import TransferTransactionError
 
-def is_transfer_transaction(entry):
-    return any_tag_starts_with(entry.tags, "transfer") or core_data.has_entry_account_component(entry, "Transfers")
+EXPECTED_POSTINGS = 2
 
-def validate_transfer_transaction(entry, party):
+
+def is_transfer_transaction(entry: data.Transaction) -> bool:
+    return any_tag_starts_with(entry.tags, "transfer") or data.has_entry_account_component(entry, "Transfers")
+
+
+def validate_transfer_transaction(entry: data.Transaction, party: str) -> list[TransferTransactionError]:
     transfer_types = {
         "transfer-to-self": {
             "payee": "Self",
@@ -59,7 +63,7 @@ def validate_transfer_transaction(entry, party):
             )
         ]
 
-    type_key = list(entry.tags)[0]
+    type_key = next(iter(entry.tags))
     if type_key not in transfer_types:
         return [
             TransferTransactionError(
@@ -69,28 +73,28 @@ def validate_transfer_transaction(entry, party):
             )
         ]
 
-    type = transfer_types[type_key]
-    errors = []
+    transfer_type = transfer_types[type_key]
+    errors: list[TransferTransactionError] = []
 
-    if entry.payee != type["payee"]:
+    if entry.payee != transfer_type["payee"]:
         errors.append(
             TransferTransactionError(
                 entry.meta,
-                f"Payee must be {type['payee']}",
+                f"Payee must be {transfer_type['payee']}",
                 entry,
             )
         )
 
-    if not entry.narration.startswith(type["narration_prefix"]):
+    if not entry.narration.startswith(transfer_type["narration_prefix"]):
         errors.append(
             TransferTransactionError(
                 entry.meta,
-                f"Narration must start with {type['narration_prefix']}",
+                f"Narration must start with {transfer_type['narration_prefix']}",
                 entry,
             )
         )
 
-    if len(entry.postings) != 2:
+    if len(entry.postings) != EXPECTED_POSTINGS:
         errors.append(
             TransferTransactionError(
                 entry.meta,
@@ -99,11 +103,11 @@ def validate_transfer_transaction(entry, party):
             )
         )
 
-    if entry.postings[1].account != type["account"]:
+    if entry.postings[1].account != transfer_type["account"]:
         errors.append(
             TransferTransactionError(
                 entry.postings[1].meta,
-                f"Second posting must be to: {type['account']}",
+                f"Second posting must be to: {transfer_type['account']}",
                 entry.postings[1],
             )
         )
@@ -112,7 +116,7 @@ def validate_transfer_transaction(entry, party):
         errors.append(
             TransferTransactionError(
                 entry.postings[0].meta,
-                f"First posting amount must be positive for transfer from",
+                "First posting amount must be positive for transfer from",
                 entry.postings[0],
             )
         )
@@ -121,7 +125,7 @@ def validate_transfer_transaction(entry, party):
         errors.append(
             TransferTransactionError(
                 entry.postings[0].meta,
-                f"First posting amount must be negative for transfer to",
+                "First posting amount must be negative for transfer to",
                 entry.postings[0],
             )
         )
