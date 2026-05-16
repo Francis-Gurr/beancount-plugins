@@ -1,6 +1,35 @@
 # beancount-plugins
 
-Custom beancount plugins
+Custom beancount v3 plugins (and, eventually, CSV importers).
+
+## Development
+
+This project uses [uv](https://docs.astral.sh/uv/) for environments and dependencies, [ruff](https://docs.astral.sh/ruff/) for linting/formatting, and [pre-commit](https://pre-commit.com/) to run them on commit.
+
+```bash
+uv sync                     # create .venv/ and install runtime + dev deps
+uv run pre-commit install   # install the git hook (one-time)
+uv run pytest               # run the test suite
+uv run ruff check .         # lint
+uv run ruff format .        # format
+```
+
+Python is pinned via `.python-version` (currently 3.12).
+
+## Using the plugins from your ledger
+
+Install the package into your ledger's environment:
+
+```bash
+uv pip install "beancount-plugins @ git+https://github.com/<your-user>/beancount-plugins.git@<commit-sha>"
+```
+
+Then load the plugins in your ledger:
+
+```beancount
+plugin "beancount_plugins.validators.shared_ratio"
+plugin "beancount_plugins.validators.transactions"
+```
 
 ## Validate shared ratio
 

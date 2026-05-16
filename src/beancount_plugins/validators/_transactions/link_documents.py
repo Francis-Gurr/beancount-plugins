@@ -1,31 +1,32 @@
-import uuid
-import os
+from pathlib import Path
 
-from beancount.core import data as core_data
+from beancount.core import data
 
 from .common import any_posting_has_metadata_key
-from .errors import FileNotFoundError
+from .errors import DocumentFileNotFoundError
 
-def get_full_filepath(entry, filename):
+
+def get_full_filepath(
+    entry: data.Balance | data.Transaction, filename: str
+) -> tuple[str, DocumentFileNotFoundError | None]:
+    full_filepath = (Path.cwd() / filename).resolve()
     err = None
 
-    cwd = os.path.abspath(os.getcwd())
-    filepath = os.path.normpath(filename)
-    full_filepath = os.path.join(cwd, filepath)
-
-    if not os.path.isfile(full_filepath):
-        err = FileNotFoundError(
+    if not full_filepath.is_file():
+        err = DocumentFileNotFoundError(
             entry.meta,
             f"File not found: {full_filepath}",
             entry,
         )
 
-    return full_filepath, err
+    return str(full_filepath), err
 
 
-def create_document_entries(entry):
-    errors = []
-    document_entries = []
+def create_document_entries(
+    entry: data.Balance | data.Transaction,
+) -> tuple[list[data.Document], list[DocumentFileNotFoundError]]:
+    errors: list[DocumentFileNotFoundError] = []
+    document_entries: list[data.Document] = []
 
     if "statement" in entry.meta:
         full_filepath, err = get_full_filepath(entry, entry.meta["statement"])
@@ -33,7 +34,7 @@ def create_document_entries(entry):
             errors.append(err)
 
         document_entries.append(
-            core_data.Document(
+            data.Document(
                 meta={
                     "filename": entry.meta["filename"],
                     "lineno": entry.meta["lineno"],
@@ -46,15 +47,12 @@ def create_document_entries(entry):
             )
         )
     if "payslip" in entry.meta:
-        # link = str(uuid.uuid4())
-        # entry.links.append(link)
-
         full_filepath, err = get_full_filepath(entry, entry.meta["payslip"])
         if err:
             errors.append(err)
 
         document_entries.append(
-            core_data.Document(
+            data.Document(
                 meta={
                     "filename": entry.meta["filename"],
                     "lineno": entry.meta["lineno"],
@@ -66,18 +64,15 @@ def create_document_entries(entry):
                 links=set(),
             )
         )
-    if isinstance(entry, core_data.Transaction) and any_posting_has_metadata_key(entry.postings, "receipt"):
+    if isinstance(entry, data.Transaction) and any_posting_has_metadata_key(entry.postings, "receipt"):
         for posting in entry.postings:
             if "receipt" in posting.meta:
-                # link = str(uuid.uuid4())
-                # entry.links.append(link)
-
                 full_filepath, err = get_full_filepath(entry, posting.meta["receipt"])
                 if err:
                     errors.append(err)
 
                 document_entries.append(
-                    core_data.Document(
+                    data.Document(
                         meta={
                             "filename": posting.meta["receipt"],
                             "lineno": posting.meta["lineno"],
@@ -91,5 +86,3 @@ def create_document_entries(entry):
                 )
 
     return document_entries, errors
-
-

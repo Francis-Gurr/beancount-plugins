@@ -1,26 +1,34 @@
-from .common import any_posting_has_metadata_key
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from .errors import PayslipTransactionError
 
-def is_payslip_transaction(entry):
+if TYPE_CHECKING:
+    from beancount.core import data
+
+
+def is_payslip_transaction(entry: data.Transaction) -> bool:
     return "payslip" in entry.tags or "payslip" in entry.meta
 
-def validate_payslip_transaction(entry, party):
-    errors = []
+
+def validate_payslip_transaction(entry: data.Transaction, party: str) -> list[PayslipTransactionError]:
+    errors: list[PayslipTransactionError] = []
 
     if "payslip" not in entry.tags:
         errors.append(
             PayslipTransactionError(
                 entry.meta,
-                f"Missing required tag of 'payslip'",
+                "Missing required tag of 'payslip'",
                 entry,
             )
         )
 
-    if not "payslip" in entry.meta:
+    if "payslip" not in entry.meta:
         errors.append(
             PayslipTransactionError(
                 entry.meta,
-                f"Missing required metadata of 'payslip'",
+                "Missing required metadata of 'payslip'",
                 entry,
             )
         )

@@ -1,22 +1,19 @@
-"""This plugin validates that there are no unused accounts.
-"""
+"""Validate that the autobean shared-ratio policy matches the actual income split."""
 
-import collections
+from typing import NamedTuple
 
-from beancount.core import data
-from beancount.core import getters
-from beancount.core import account
+from beancount.core import account, data
 
-from math import gcd
+__plugins__ = ("validate_shared_ratio",)
 
-__plugins__ = ("validate_transactions",)
 
-IncorrectSharedRatio = collections.namedtuple("IncorrectSharedRatio", "source message entry")
+class IncorrectSharedRatio(NamedTuple):
+    source: data.Meta | None
+    message: str
+    entry: data.Directive | None
 
-# parties = ["Francis", "Leyna"]
-# fromAccounts = ["Income:Francis:GrossPay", "Income:Leyna:GrossPay"]
-# toAccounts = ["Assets:Francis:Bank", "Assets:Leyna:Bank"]
-parties = {
+
+parties: dict[str, dict[str, str | int]] = {
     "Francis": {
         "from": "Income:Francis:GrossPay",
         "to": "Assets:Francis:Bank",
@@ -30,7 +27,7 @@ parties = {
 }
 
 
-def calculate_shared_ratio(entries, unused_options_map):
+def calculate_shared_ratio() -> dict[str, float]:
     francis_total_income = parties["Francis"]["total_income"]
     leyna_total_income = parties["Leyna"]["total_income"]
 
@@ -39,11 +36,13 @@ def calculate_shared_ratio(entries, unused_options_map):
     return {"Francis": francis_total_income / max_income, "Leyna": leyna_total_income / max_income}
 
 
-def validate_shared_ratio(entries, unused_options_map):
-    errors = []
+def validate_shared_ratio(
+    entries: data.Entries, _unused_options_map: data.Options
+) -> tuple[data.Entries, list[IncorrectSharedRatio]]:
+    errors: list[IncorrectSharedRatio] = []
     main_party = ""
     main_account = ""
-    provided_ratio = {}
+    provided_ratio: dict[str, object] = {}
 
     for entry in entries:
         is_income_entry = (
@@ -68,12 +67,13 @@ def validate_shared_ratio(entries, unused_options_map):
         elif is_income_entry:
             parties[main_party]["total_income"] += entry.postings[0].units.number
 
-    actual_ratio = calculate_shared_ratio(entries, unused_options_map)
+    actual_ratio = calculate_shared_ratio()
     if provided_ratio == {}:
         errors.append(
             IncorrectSharedRatio(
                 None,
-                "Shared ratio is not provided. Provide the shared ratio using the custom autobean.share.policy directive.",
+                "Shared ratio is not provided. "
+                "Provide the shared ratio using the custom autobean.share.policy directive.",
                 None,
             )
         )
