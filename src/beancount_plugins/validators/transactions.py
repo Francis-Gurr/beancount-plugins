@@ -18,10 +18,10 @@ from ._transactions.transfer import is_transfer_transaction, validate_transfer_t
 
 __plugins__ = ("validate_transactions",)
 
-file_account_map: dict[str, dict[str, str]] = {}
 
-
-def get_transaction_filename(entry: data.Transaction) -> tuple[str, JournalError | None]:
+def get_transaction_filename(
+    entry: data.Transaction, file_account_map: dict[str, dict[str, str]]
+) -> tuple[str, JournalError | None]:
     err = None
 
     transaction_filename = entry.meta["filename"]
@@ -105,6 +105,7 @@ def validate_transactions(
     errors: list[object] = []
     entries_with_documents: list[data.Balance | data.Transaction] = []
     event_ids: list[str] = []
+    file_account_map: dict[str, dict[str, str]] = {}
 
     for entry in entries:
         if should_skip(entry):
@@ -125,7 +126,7 @@ def validate_transactions(
             errors.extend(_process_event(entry, event_ids))
 
         elif isinstance(entry, data.Transaction):
-            transaction_filename, err = get_transaction_filename(entry)
+            transaction_filename, err = get_transaction_filename(entry, file_account_map)
             if err:
                 errors.append(err)
                 continue

@@ -13,27 +13,24 @@ class IncorrectSharedRatio(NamedTuple):
     entry: data.Directive | None
 
 
-parties: dict[str, dict[str, str | int]] = {
+PARTY_ACCOUNTS: dict[str, dict[str, str]] = {
     "Francis": {
         "from": "Income:Francis:GrossPay",
         "to": "Assets:Francis:Bank",
-        "total_income": 0,
     },
     "Leyna": {
         "from": "Income:Leyna:GrossPay",
         "to": "Assets:Leyna:Bank",
-        "total_income": 0,
     },
 }
 
 
-def calculate_shared_ratio() -> dict[str, float]:
-    francis_total_income = parties["Francis"]["total_income"]
-    leyna_total_income = parties["Leyna"]["total_income"]
-
-    max_income = max(francis_total_income, leyna_total_income)
-
-    return {"Francis": francis_total_income / max_income, "Leyna": leyna_total_income / max_income}
+def calculate_shared_ratio(total_income: dict[str, float]) -> dict[str, float]:
+    max_income = max(total_income["Francis"], total_income["Leyna"])
+    return {
+        "Francis": total_income["Francis"] / max_income,
+        "Leyna": total_income["Leyna"] / max_income,
+    }
 
 
 def validate_shared_ratio(
@@ -43,13 +40,14 @@ def validate_shared_ratio(
     main_party = ""
     main_account = ""
     provided_ratio: dict[str, object] = {}
+    total_income: dict[str, float] = {"Francis": 0, "Leyna": 0}
 
     for entry in entries:
         is_income_entry = (
             isinstance(entry, data.Transaction)
-            and main_party in parties
-            and main_account.startswith(parties[main_party]["to"])
-            and data.has_entry_account_component(entry, parties[main_party]["from"])
+            and main_party in PARTY_ACCOUNTS
+            and main_account.startswith(PARTY_ACCOUNTS[main_party]["to"])
+            and data.has_entry_account_component(entry, PARTY_ACCOUNTS[main_party]["from"])
         )
 
         if (
@@ -65,9 +63,9 @@ def validate_shared_ratio(
             main_account = entry.values[0].value
             main_party = account.split(main_account)[1]
         elif is_income_entry:
-            parties[main_party]["total_income"] += entry.postings[0].units.number
+            total_income[main_party] += entry.postings[0].units.number
 
-    actual_ratio = calculate_shared_ratio()
+    actual_ratio = calculate_shared_ratio(total_income)
     if provided_ratio == {}:
         errors.append(
             IncorrectSharedRatio(
