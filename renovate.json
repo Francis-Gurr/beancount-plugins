@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":dependencyDashboard"
+  ],
+  "schedule": ["before 9am on monday"],
+  "timezone": "Europe/London",
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "matchManagers": ["pre-commit"],
+      "groupName": "pre-commit hooks"
+    },
+    {
+      "matchDepTypes": ["dev"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "dev dependencies (patch/minor)",
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "matchDepTypes": ["dev"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "dev dependencies (major)"
+    },
+    {
+      "matchDepTypes": ["project.dependencies"],
+      "groupName": "runtime dependencies"
+    }
+  ]
+}
