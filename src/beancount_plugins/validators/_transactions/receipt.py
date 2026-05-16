@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 def is_receipt_transaction(entry: data.Transaction) -> bool:
-    return "receipt" in entry.tags or any_posting_has_metadata_key(entry.postings, "receipt")
+    return "valuables" in entry.tags or any_posting_has_metadata_key(entry.postings, "receipt")
 
 
 def validate_receipt_transaction(entry: data.Transaction) -> list[ReceiptTransactionError]:
@@ -20,7 +20,7 @@ def validate_receipt_transaction(entry: data.Transaction) -> list[ReceiptTransac
         errors.append(
             ReceiptTransactionError(
                 entry.meta,
-                "Missing required tag of 'receipt'",
+                "Missing required tag of 'valuables'",
                 entry,
             )
         )

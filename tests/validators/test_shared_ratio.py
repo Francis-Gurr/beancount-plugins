@@ -1,4 +1,25 @@
-from beancount_plugins.validators.shared_ratio import validate_shared_ratio
+from decimal import Decimal
+
+from beancount_plugins.validators.shared_ratio import calculate_shared_ratio, validate_shared_ratio
+
+
+def test_calculate_shared_ratio_zero_income_does_not_crash():
+    result = calculate_shared_ratio({"Francis": Decimal(0), "Leyna": Decimal(0)})
+    assert result == {"Francis": Decimal(0), "Leyna": Decimal(0)}
+
+
+def test_shared_ratio_no_income_transactions(load_doc):
+    """Policy declared but no income entries to verify against — produces 'incorrect ratio' error, not a crash."""
+    entries, options_map = load_doc("""
+        2000-01-01 custom "autobean.share.policy" "shared"
+          share-Francis: 1
+          share-Leyna: 0.5
+        2000-01-01 custom "journal account name" "Assets:Francis:Bank"
+        2000-01-01 open  Assets:Francis:Bank
+    """)
+    _, errors = validate_shared_ratio(entries, options_map)
+    assert len(errors) == 1
+    assert "Shared ratio is incorrect" in errors[0].message
 
 
 def test_valid_shared_ratio(load_doc):

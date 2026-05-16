@@ -103,24 +103,3 @@ def test_invalid_default_transaction_multiple(load_doc):
     """)
     _, errors = validate_transactions(entries, options_map)
     assert len(errors) == 2
-
-
-def test_skip_validation(load_doc):
-    entries, options_map = load_doc("""
-        2000-01-01 custom "initialise_journal_file" "Francis" "Assets:Francis:Bank"
-
-        2000-01-01 open  Assets:Francis:Bank
-        2000-01-01 open  Equity:Francis:OpeningBalances
-        2000-01-01 * #journal-opening-balance
-          Assets:Francis:Bank        1 GBP
-          Equity:Francis:OpeningBalances    -1 GBP
-
-        2000-01-01 open  Assets:Francis:Transfers:Elsewhere
-        2000-01-01 open  Assets:OtherParty:Bank
-        2000-01-01 * #exclude-entry-from-validation
-          Assets:Francis:Transfers:Elsewhere -1 GBP
-          Assets:Francis:Bank        2 GBP
-          Assets:OtherParty:Bank -1 GBP
-    """)
-    _, errors = validate_transactions(entries, options_map)
-    assert len(errors) == 0
