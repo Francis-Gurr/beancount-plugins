@@ -1,11 +1,15 @@
 """Validate that the autobean shared-ratio policy matches the actual income split."""
 
+from __future__ import annotations
+
 from decimal import Decimal
 from typing import NamedTuple
 
 from beancount.core import account, data
 
 __plugins__ = ("validate_shared_ratio",)
+
+PLUGIN_NAME = "validate_shared_ratio"
 
 
 class IncorrectSharedRatio(NamedTuple):
@@ -39,6 +43,7 @@ def calculate_shared_ratio(total_income: dict[str, Decimal]) -> dict[str, Decima
 def validate_shared_ratio(
     entries: data.Entries, _unused_options_map: data.Options
 ) -> tuple[data.Entries, list[IncorrectSharedRatio]]:
+    src = data.new_metadata(PLUGIN_NAME, 0)
     errors: list[IncorrectSharedRatio] = []
     main_party = ""
     main_account = ""
@@ -69,27 +74,21 @@ def validate_shared_ratio(
             total_income[main_party] += entry.postings[0].units.number
 
     actual_ratio = calculate_shared_ratio(total_income)
-    if provided_ratio == {}:
+    if not provided_ratio:
         errors.append(
             IncorrectSharedRatio(
-                None,
+                src,
                 "Shared ratio is not provided. "
                 "Provide the shared ratio using the custom autobean.share.policy directive.",
                 None,
             )
         )
     elif provided_ratio != actual_ratio:
-        actual_ratio_str = {
-            "Francis": str(actual_ratio["Francis"]),
-            "Leyna": str(actual_ratio["Leyna"]),
-        }
-        provided_ratio_str = {
-            "Francis": str(provided_ratio["Francis"]),
-            "Leyna": str(provided_ratio["Leyna"]),
-        }
+        actual_ratio_str = {k: str(v) for k, v in actual_ratio.items()}
+        provided_ratio_str = {k: str(v) for k, v in provided_ratio.items()}
         errors.append(
             IncorrectSharedRatio(
-                None,
+                src,
                 f"Shared ratio is incorrect. Actual: {actual_ratio_str}, Provided: {provided_ratio_str}",
                 None,
             )

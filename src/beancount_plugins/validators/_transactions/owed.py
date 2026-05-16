@@ -1,8 +1,21 @@
+"""Validate owed transactions (cross-party expenses)."""
+
+from __future__ import annotations
+
 from beancount.core import account as core_account
 from beancount.core import data
 
 from .common import any_tag_starts_with
 from .errors import OwedTransactionError, PostingToAnotherPartyError
+
+PLUGIN_NAME = "validate_transactions"
+
+OWED_TYPES: dict[str, tuple[str, ...]] = {
+    "owed-by-francis": ("Expenses:Francis", "Assets:Francis:Receivables"),
+    "owed-by-leyna": ("Expenses:Leyna", "Assets:Leyna:Receivables"),
+    "owed-by-shared": ("Expenses:Shared", "Assets:Shared:Receivables"),
+    "owed-to-shared": ("Income:Shared:GiftsReceived",),
+}
 
 
 def any_posting_has_different_party(postings: list[data.Posting], party: str) -> bool:
@@ -19,87 +32,45 @@ def is_owed_transaction(entry: data.Transaction, party: str) -> bool:
 def validate_owed_transaction(
     entry: data.Transaction, party: str
 ) -> list[OwedTransactionError | PostingToAnotherPartyError]:
-    owed_types = {
-        "owed-by-francis": {
-            "extra_allowed_account_prefixes": ["Expenses:Francis", "Assets:Francis:Receivables"],
-            "tags": ["owed", "owed-by-francis"],
-        },
-        "owed-by-leyna": {
-            "extra_allowed_account_prefixes": ["Expenses:Leyna", "Assets:Leyna:Receivables"],
-            "tags": ["owed", "owed-by-leyna"],
-        },
-        "owed-by-shared": {
-            "extra_allowed_account_prefixes": ["Expenses:Shared", "Assets:Shared:Receivables"],
-            "tags": ["owed", "owed-by-shared"],
-        },
-        "owed-to-shared": {
-            "extra_allowed_account_prefixes": ["Income:Shared:GiftsReceived"],
-            "tags": ["owed", "owed-to-shared"],
-        },
-    }
-
-    other_allowed_account_prefixes: list[str] = []
+    src = data.new_metadata(PLUGIN_NAME, entry.meta["lineno"])
     errors: list[OwedTransactionError | PostingToAnotherPartyError] = []
+    other_allowed_account_prefixes: list[str] = []
 
     for tag in entry.tags:
-        if tag.startswith("owed"):
-            if tag not in owed_types:
-                return [
-                    OwedTransactionError(
-                        entry.meta,
-                        f"Invalid owed tag: {tag}",
-                        entry,
-                    )
-                ]
+        if not tag.startswith("owed"):
+            continue
 
-            # Cannot owe to self
-            if tag == f"owed-by-{party.lower()}":
-                return [
-                    OwedTransactionError(
-                        entry.meta,
-                        "Owed tag must be for another party",
-                        entry,
-                    )
-                ]
+        if tag not in OWED_TYPES:
+            return [OwedTransactionError(src, f"Invalid owed tag: {tag}", entry)]
 
-            has_expected_account_with_prefix = False
-            for allowed_account_prefix in owed_types[tag]["extra_allowed_account_prefixes"]:
-                has_expected_account_with_prefix = has_expected_account_with_prefix or data.has_entry_account_component(
-                    entry, allowed_account_prefix
+        # Cannot owe to self
+        if tag == f"owed-by-{party.lower()}":
+            return [OwedTransactionError(src, "Owed tag must be for another party", entry)]
+
+        allowed_prefixes = OWED_TYPES[tag]
+        has_expected_account = any(data.has_entry_account_component(entry, prefix) for prefix in allowed_prefixes)
+        if not has_expected_account:
+            errors.append(
+                OwedTransactionError(
+                    src,
+                    f"Expected at least one posting to an account starting with: {list(allowed_prefixes)}",
+                    entry,
                 )
-
-            # Must have a posting to Expenses:OwedPart or Assets:OwedPart:Receivables
-            if not has_expected_account_with_prefix:
-                errors.append(
-                    OwedTransactionError(
-                        entry.meta,
-                        f"Expected at least one posting to an account starting with: "
-                        f"{owed_types[tag]['extra_allowed_account_prefixes']}",
-                        entry,
-                    )
-                )
-
-            other_allowed_account_prefixes = (
-                other_allowed_account_prefixes + owed_types[tag]["extra_allowed_account_prefixes"]
             )
+
+        other_allowed_account_prefixes.extend(allowed_prefixes)
 
     for posting in entry.postings[1:]:
-        account_split = core_account.split(posting.account)
-        party_of_posting = account_split[1]
+        party_of_posting = core_account.split(posting.account)[1]
+        posting_account_is_allowed = any(
+            posting.account.startswith(prefix) for prefix in other_allowed_account_prefixes
+        )
 
-        posting_party_is_not_entry_party = party_of_posting != party
-        posting_account_is_not_expected = False
-        for allowed_account_prefix in other_allowed_account_prefixes:
-            posting_account_is_not_expected = posting_account_is_not_expected or posting.account.startswith(
-                allowed_account_prefix
-            )
-
-        # Cannot post to any account that does not belong to the party or to Expenses:OwedParties
-        # or Assets:OwedParties:Receivables
-        if posting_party_is_not_entry_party and not posting_account_is_not_expected:
+        if party_of_posting != party and not posting_account_is_allowed:
+            posting_src = data.new_metadata(PLUGIN_NAME, posting.meta["lineno"])
             errors.append(
                 PostingToAnotherPartyError(
-                    posting.meta,
+                    posting_src,
                     f"Posting to an account that does not belong to the party: {party}, "
                     f"or to any of the owed parties' allowed accounts: "
                     f"{other_allowed_account_prefixes}. "

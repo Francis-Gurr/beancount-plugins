@@ -1,12 +1,13 @@
+"""Validate that valuables transactions have receipt metadata."""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from beancount.core import data
 
 from .common import any_posting_has_metadata_key
 from .errors import ReceiptTransactionError
 
-if TYPE_CHECKING:
-    from beancount.core import data
+PLUGIN_NAME = "validate_transactions"
 
 
 def is_receipt_transaction(entry: data.Transaction) -> bool:
@@ -14,12 +15,13 @@ def is_receipt_transaction(entry: data.Transaction) -> bool:
 
 
 def validate_receipt_transaction(entry: data.Transaction) -> list[ReceiptTransactionError]:
+    src = data.new_metadata(PLUGIN_NAME, entry.meta["lineno"])
     errors: list[ReceiptTransactionError] = []
 
     if "valuables" not in entry.tags:
         errors.append(
             ReceiptTransactionError(
-                entry.meta,
+                src,
                 "Missing required tag of 'valuables'",
                 entry,
             )
@@ -28,7 +30,7 @@ def validate_receipt_transaction(entry: data.Transaction) -> list[ReceiptTransac
     if not any_posting_has_metadata_key(entry.postings, "receipt"):
         errors.append(
             ReceiptTransactionError(
-                entry.meta,
+                src,
                 "Missing required metadata of 'receipt'",
                 entry,
             )
@@ -36,7 +38,7 @@ def validate_receipt_transaction(entry: data.Transaction) -> list[ReceiptTransac
 
     errors.extend(
         ReceiptTransactionError(
-            entry.meta,
+            src,
             "Transactions with receipt metadata must be to an expense account",
             entry,
         )

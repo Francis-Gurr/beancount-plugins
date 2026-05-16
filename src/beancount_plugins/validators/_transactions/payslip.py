@@ -1,11 +1,12 @@
+"""Validate payslip transactions."""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from beancount.core import data
 
 from .errors import PayslipTransactionError
 
-if TYPE_CHECKING:
-    from beancount.core import data
+PLUGIN_NAME = "validate_transactions"
 
 
 def is_payslip_transaction(entry: data.Transaction) -> bool:
@@ -13,12 +14,13 @@ def is_payslip_transaction(entry: data.Transaction) -> bool:
 
 
 def validate_payslip_transaction(entry: data.Transaction, party: str) -> list[PayslipTransactionError]:
+    src = data.new_metadata(PLUGIN_NAME, entry.meta["lineno"])
     errors: list[PayslipTransactionError] = []
 
     if "payslip" not in entry.tags:
         errors.append(
             PayslipTransactionError(
-                entry.meta,
+                src,
                 "Missing required tag of 'payslip'",
                 entry,
             )
@@ -27,7 +29,7 @@ def validate_payslip_transaction(entry: data.Transaction, party: str) -> list[Pa
     if "payslip" not in entry.meta:
         errors.append(
             PayslipTransactionError(
-                entry.meta,
+                src,
                 "Missing required metadata of 'payslip'",
                 entry,
             )
@@ -36,7 +38,7 @@ def validate_payslip_transaction(entry: data.Transaction, party: str) -> list[Pa
     if len(entry.postings) > 1 and entry.postings[1].account != f"Income:{party}:GrossPay:Salary":
         errors.append(
             PayslipTransactionError(
-                entry.meta,
+                src,
                 f"Second posting account should be 'Income:{party}:GrossPay:Salary'",
                 entry,
             )

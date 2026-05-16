@@ -1,3 +1,5 @@
+"""Error tuples emitted by the transactions validator and its helpers."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
@@ -82,3 +84,20 @@ class EventTransactionError(NamedTuple):
     source: data.Meta | None
     message: str
     entry: data.Directive | None
+
+
+type ValidationError = (
+    JournalError
+    | OpeningBalanceTransactionError
+    | MissingOpeningBalanceError
+    | FirstPostingIsNotToSpecifiedAccountError
+    | PostingToAnotherPartyError
+    | BalanceAssertionError
+    | TransferTransactionError
+    | ReceiptTransactionError
+    | PayslipTransactionError
+    | OwedTransactionError
+    | DocumentFileNotFoundError
+    | EventError
+    | EventTransactionError
+)
