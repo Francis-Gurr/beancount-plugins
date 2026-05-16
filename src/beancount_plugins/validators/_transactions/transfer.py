@@ -102,6 +102,7 @@ def validate_transfer_transaction(entry: data.Transaction, party: str) -> list[T
                 entry,
             )
         )
+        return errors
 
     if entry.postings[1].account != transfer_type["account"]:
         errors.append(

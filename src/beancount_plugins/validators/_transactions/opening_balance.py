@@ -29,6 +29,8 @@ def validate_opening_balance_transaction(entry: data.Transaction) -> list[Openin
                 entry,
             )
         )
+        return errors
+
     if core_account.root(1, entry.postings[1].account) != "Equity":
         errors.append(
             OpeningBalanceTransactionError(

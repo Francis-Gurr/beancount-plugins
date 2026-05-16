@@ -1,5 +1,6 @@
 """Validate that the autobean shared-ratio policy matches the actual income split."""
 
+from decimal import Decimal
 from typing import NamedTuple
 
 from beancount.core import account, data
@@ -25,8 +26,10 @@ PARTY_ACCOUNTS: dict[str, dict[str, str]] = {
 }
 
 
-def calculate_shared_ratio(total_income: dict[str, float]) -> dict[str, float]:
+def calculate_shared_ratio(total_income: dict[str, Decimal]) -> dict[str, Decimal]:
     max_income = max(total_income["Francis"], total_income["Leyna"])
+    if max_income == 0:
+        return {"Francis": Decimal(0), "Leyna": Decimal(0)}
     return {
         "Francis": total_income["Francis"] / max_income,
         "Leyna": total_income["Leyna"] / max_income,
@@ -40,7 +43,7 @@ def validate_shared_ratio(
     main_party = ""
     main_account = ""
     provided_ratio: dict[str, object] = {}
-    total_income: dict[str, float] = {"Francis": 0, "Leyna": 0}
+    total_income: dict[str, Decimal] = {"Francis": Decimal(0), "Leyna": Decimal(0)}
 
     for entry in entries:
         is_income_entry = (
