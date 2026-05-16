@@ -2,6 +2,8 @@
 name = "beancount-plugins"
 version = "0.1.0"
 description = "Custom beancount v3 plugins and CSV importers"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "beancount>=3",
@@ -16,11 +18,8 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
+requires = ["uv_build>=0.11.14,<0.12"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 120

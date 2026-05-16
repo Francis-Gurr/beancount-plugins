@@ -1,83 +1,31 @@
 # beancount-plugins
 
-Custom beancount v3 plugins (and, eventually, CSV importers).
+Custom validators for a [beancount v3](https://github.com/beancount/beancount) ledger.
 
-## Development
+Enforces conventions for a two-party shared-finance ledger: opening balances, transfers, owed (cross-party) transactions, payslips, valuables/receipts, balance assertions, and events. See each module's docstring under [`src/beancount_plugins/validators/`](src/beancount_plugins/validators/) for the specific rules.
 
-This project uses [uv](https://docs.astral.sh/uv/) for environments and dependencies, [ruff](https://docs.astral.sh/ruff/) for linting/formatting, and [pre-commit](https://pre-commit.com/) to run them on commit.
-
-```bash
-uv sync                     # create .venv/ and install runtime + dev deps
-uv run pre-commit install   # install the git hook (one-time)
-uv run pytest               # run the test suite
-uv run ruff check .         # lint
-uv run ruff format .        # format
-```
-
-Python is pinned via `.python-version` (currently 3.12).
-
-## Using the plugins from your ledger
-
-Install the package into your ledger's environment:
+## Use in your ledger
 
 ```bash
-uv pip install "beancount-plugins @ git+https://github.com/<your-user>/beancount-plugins.git@<commit-sha>"
+uv pip install "beancount-plugins @ git+https://github.com/Francis-Gurr/beancount-plugins.git"
 ```
-
-Then load the plugins in your ledger:
 
 ```beancount
 plugin "beancount_plugins.validators.shared_ratio"
 plugin "beancount_plugins.validators.transactions"
 ```
 
-## Validate shared ratio
+## Development
 
-Calculates the correct ratio for the share policy `shared` and throws an error if it is incorrect.
+```bash
+uv sync                    # install runtime + dev dependencies
+uv run pytest              # run the test suite
+uv run ruff check .        # lint
+uv run ruff format .       # format
+uv run ty check            # type-check
+uv run pre-commit install  # one-time: install the git pre-commit hook
+```
 
-1. Calculates the total income for Francis as:\
-   The total amount into accounts with root `Assets:Francis:Bank` from accounts with root `Income:Francis:GrossPay`
-2. Calculates the total income for Leyna as:\
-   The total amount into accounts with root `Assets:Leyna:Bank` from accounts with root `Income:Leyna:GrossPay`
-3. Calculates the income ratio `Francis:Leyna` in the form `a:b` where `(a = 1 and b < 1) or (a < 1 and b = 1)`
-4. Throws an error if the calculated ratio is not the same as the ratio defined using the autobean share policy directive:
-   ```
-   2000-01-01 custom "autobean.share.policy" "shared"
-          share-Francis: a
-          share-Leyna: b
-          share_enforced: TRUE
-          share_prorated_included: FALSE
-   ```
+## License
 
-## Validate transactions
-
-Validates that transactions follow certain rules.
-
-### Opening balances
-- Every journal should be for a real account (e.g. bank or credit card) and start with an opening balance transaction with the `#journal-opening-balance` tag.
-- For every following transaction in the journal the first posting should be to the same account as in the `#journal-opening-balance` transaction.
-
-### Transfers between accounts
-- Have only one of the following tags: `transfer-to-self`, `transfer-to-francis`, `transfer-to-leyna`, `transfer-from-self`, `transfer-from-francis`, `transfer-from-leyna`.
-- The transaction should include an account with the component `Transfers`.
-- The payee must be `Self`, `Francis`, `Leyna` or `Shared` respectively.
-- The narration must start with `Transfer to self: `, `Transfer to Francis: `, `Transfer to Leyna: `, `Transfer to Shared: ` respectively and the colon should be followed by the account name.
-- Can only have two postings.
-- The second posting must be to `Assets:Francis:Transfers:<Self || FromLeyna || FromShared>`, `Assets:Leyna:Transfers:<Self || FromFrancis || FromShared>`, `Assets:Shared:Transfers:<Self || FromFrancis || FromLeyna>` respecively.
-- If it is a transfer from, the first posting amount must be positive.
-- If it is a transfer to, the first posting amount must be negative.
-
-### Owed transactions
-- Must include one or more of the following tags: `owed-by-francis`, `owed-by-leyna`, `owed-by-shared`.
-- Owed tag must be for another party.
-- Entry must include at least one posting to an expense account or a receivables account for the party that is owed.
-- Cannot post to any other party's account that is not owed.
-- Can only post to an expense account for the owed party.
-
-### Expense transaction for an item that should be covered by insurance
-- Must have the `valuables` tag.
-- The expense posting must include the meta `receipt` with a file path to the receipt document.
-
-### Payslip
-- Must have the `payslip` tag.
-- The transaction must include the meta `payslip` with a file path to the payslip.
+[MIT](LICENSE).
