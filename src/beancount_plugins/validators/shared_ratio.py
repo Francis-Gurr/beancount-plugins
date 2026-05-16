@@ -51,27 +51,25 @@ def validate_shared_ratio(
     total_income: dict[str, Decimal] = {"Francis": Decimal(0), "Leyna": Decimal(0)}
 
     for entry in entries:
-        is_income_entry = (
-            isinstance(entry, data.Transaction)
-            and main_party in PARTY_ACCOUNTS
-            and main_account.startswith(PARTY_ACCOUNTS[main_party]["to"])
-            and data.has_entry_account_component(entry, PARTY_ACCOUNTS[main_party]["from"])
-        )
-
         if (
             isinstance(entry, data.Custom)
             and entry.type == "autobean.share.policy"
             and entry.values[0].value == "shared"
         ):
-            provided_ratio = {
-                "Francis": entry.meta["share-Francis"],
-                "Leyna": entry.meta["share-Leyna"],
-            }
+            meta = entry.meta or {}
+            provided_ratio = {"Francis": meta["share-Francis"], "Leyna": meta["share-Leyna"]}
         elif isinstance(entry, data.Custom) and entry.type == "journal account name":
             main_account = entry.values[0].value
             main_party = account.split(main_account)[1]
-        elif is_income_entry:
-            total_income[main_party] += entry.postings[0].units.number
+        elif (
+            isinstance(entry, data.Transaction)
+            and main_party in PARTY_ACCOUNTS
+            and main_account.startswith(PARTY_ACCOUNTS[main_party]["to"])
+            and data.has_entry_account_component(entry, PARTY_ACCOUNTS[main_party]["from"])
+        ):
+            units = entry.postings[0].units
+            if units is not None and units.number is not None:
+                total_income[main_party] += units.number
 
     actual_ratio = calculate_shared_ratio(total_income)
     if not provided_ratio:

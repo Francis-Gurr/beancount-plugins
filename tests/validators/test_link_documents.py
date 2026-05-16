@@ -1,3 +1,5 @@
+from beancount.core import data
+
 from beancount_plugins.validators.transactions import validate_transactions
 
 
@@ -16,8 +18,9 @@ def test_statement_creates_document_entry(load_doc, tmp_path):
           statement: "{statement}"
     """)
     extended_entries, errors = validate_transactions(entries, options_map)
-    docs = [e for e in extended_entries if e.__class__.__name__ == "Document"]
+    docs = [e for e in extended_entries if isinstance(e, data.Document)]
     assert len(docs) == 1
+    assert docs[0].tags is not None
     assert "statement" in docs[0].tags
     assert docs[0].account == "Assets:Francis:Bank"
     assert len(errors) == 0
@@ -41,8 +44,9 @@ def test_payslip_creates_document_entry(load_doc, tmp_path):
           Income:Francis:GrossPay:Salary -1000 GBP
     """)
     extended_entries, errors = validate_transactions(entries, options_map)
-    docs = [e for e in extended_entries if e.__class__.__name__ == "Document"]
+    docs = [e for e in extended_entries if isinstance(e, data.Document)]
     assert len(docs) == 1
+    assert docs[0].tags is not None
     assert "payslip" in docs[0].tags
     assert docs[0].account == "Income:Francis:GrossPay:Salary"
     payslip_errors = [e for e in errors if e.__class__.__name__ == "PayslipTransactionError"]
@@ -67,8 +71,9 @@ def test_receipt_creates_document_entry(load_doc, tmp_path):
             receipt: "{receipt}"
     """)
     extended_entries, errors = validate_transactions(entries, options_map)
-    docs = [e for e in extended_entries if e.__class__.__name__ == "Document"]
+    docs = [e for e in extended_entries if isinstance(e, data.Document)]
     assert len(docs) == 1
+    assert docs[0].tags is not None
     assert "receipt" in docs[0].tags
     assert docs[0].account == "Expenses:Francis:Electronics"
     receipt_errors = [e for e in errors if e.__class__.__name__ == "ReceiptTransactionError"]
