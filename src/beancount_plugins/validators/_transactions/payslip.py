@@ -33,7 +33,7 @@ def validate_payslip_transaction(entry: data.Transaction, party: str) -> list[Pa
             )
         )
 
-    if entry.postings[1].account != f"Income:{party}:GrossPay:Salary":
+    if len(entry.postings) > 1 and entry.postings[1].account != f"Income:{party}:GrossPay:Salary":
         errors.append(
             PayslipTransactionError(
                 entry.meta,
