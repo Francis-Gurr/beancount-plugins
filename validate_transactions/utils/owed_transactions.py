@@ -24,7 +24,7 @@ def validate_owed_transaction(entry, party):
             "tags": ["owed", "owed-by-leyna"],
         },
         "owed-by-shared": {
-            "extra_allowed_account_prefixes": ["Expenses:Shared", "Assets:Shared:Receivables"],
+            "extra_allowed_account_prefixes": ["Expenses:Shared", "Assets:Shared:Receivables", "Assets:Shared:Cash"],
             "tags": ["owed", "owed-by-shared"],
         },
         "owed-to-shared": {
